@@ -1,0 +1,7 @@
+
+resources:
+  - name: MyPropBag
+    type: PropertyBag
+    configuration:
+      key: value
+      name: oded

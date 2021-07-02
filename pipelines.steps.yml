@@ -1,0 +1,37 @@
+resources:
+  - name: gosvc_gitRepo
+    type: GitRepo
+    configuration:
+      path: Lostam/pipelines-test-100
+      gitProvider: myAppRepo
+
+pipelines:
+  - name: demo_gosvc
+    steps:
+      - name: docker_build
+        type: DockerBuild
+        configuration:
+          dockerFileName: Dockerfile
+          dockerImageName: 192.168.50.2:8082/docker-local/gosvcas
+          dockerImageTag: ${run_number}
+          inputResources:
+            - name: gosvc_gitRepo
+          integrations:
+            - name: demo_art
+        execution:
+          onStart:
+            - ls dependencyState/resources/gosvc_gitRepo/
+            - echo "AA"
+
+      - name: docker_push
+        type: DockerPush
+        configuration:
+          targetRepository: docker-local
+          integrations:
+            - name: demo_art
+          inputSteps:
+            - name: docker_build
+        execution:
+          onStart:
+            - ls
+            - echo "AA"

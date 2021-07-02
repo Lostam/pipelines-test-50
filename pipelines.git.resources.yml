@@ -1,0 +1,7 @@
+resources:
+  - name: myAppRepo
+    type: GitRepo
+    configuration:
+      gitProvider: myAppRepo
+      path: Lostam/pipelines-test-100
+       

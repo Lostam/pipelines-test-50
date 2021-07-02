@@ -1,0 +1,29 @@
+resources:
+  - name: npm_example_buildinfo_jfp
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: demo_art
+
+pipelines:
+  - name: npm_sample
+    steps:
+      - name: npm_build_step
+        type: NpmBuild
+        configuration:
+          repositoryName: npm-virtual
+          sourceLocation: ./
+          integrations:
+            - name: demo_art
+          inputResources:
+            - name: gosvc_gitRepo         # required
+      - name: npm_publish_step
+        type: NpmPublish
+        configuration:
+          repositoryName: npm-virtual        # required, npm repository name on artifactory
+          autoPublishBuildInfo: true       # optional
+          integrations:
+            - name: demo_art      # required
+          inputSteps:
+            - name: npm_build_step                # required
+          outputResources:
+            - name: npm_example_buildinfo_jfp                 # optional
