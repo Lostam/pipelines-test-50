@@ -1,7 +1,11 @@
-
-resources:
-  - name: MyPropBag
-    type: PropertyBag
-    configuration:
-      key: value
-      name: oded
+pipelines:
+  - name: demo_gosvc
+    steps:
+      - name: step1
+        type: Bash
+        configuration:
+          inputResources:
+            - name: MyPropBag
+        execution:
+          onExecute:
+            - echo "Hi"
