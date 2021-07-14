@@ -39,7 +39,6 @@ pipelines:
           configuration:
             inputResources:
               - name: MyPropBag1
-                branch: branch1
           execution:
             onExecute:
               - echo "Hi"
