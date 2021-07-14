@@ -1,3 +1,35 @@
+resources:
+  - name: MyPropBag1
+    type: PropertyBag
+    configuration:
+      key: value
+      name: oded
+  - name: MyPropBag2
+    type: PropertyBag
+    configuration:
+      key: value
+      name: oded
+  - name: MyPropBag3
+    type: PropertyBag
+    configuration:
+      key: value
+      name: oded
+  - name: MyPropBag4
+    type: PropertyBag
+    configuration:
+      key: value
+      name: oded
+  - name: MyPropBag5
+    type: PropertyBag
+    configuration:
+      key: value
+      name: oded
+  - name: MyPropBag6
+    type: PropertyBag
+    configuration:
+      key: value
+      name: oded
+
 
 pipelines:
     - name: demo_gosvc
@@ -7,6 +39,8 @@ pipelines:
           configuration:
             inputResources:
               - name: MyPropBag
+              - name: MyAppRepo
+                branch: branch1
           execution:
             onExecute:
               - echo "Hi"
