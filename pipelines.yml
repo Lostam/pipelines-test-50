@@ -1,29 +1,207 @@
 resources:
-  - name: npm_example_buildinfo_jfp
-    type: BuildInfo
+  - name: jfrog_installer_commons_bitbucket
+    type: GitRepo
     configuration:
-      sourceArtifactory: demo_art
+      path: common/jfrog-installer-commons
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      buildOn:
+        commit: true
+pipelines:
+  - name: installer_build
+    steps:
+      - name: initilizeBuild
+        type: Bash
+        configuration:
+          inputResources:
+            - name: jfrog_installer_commons_bitbucket
+          integrations:
+            - name: entplus_deployer
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_commons_bitbucket_resourcePath}
+          onExecute:
+            - echo "Start"
+          onComplete:
+            - popd
+          onSuccess:
+            - add_pipeline_variables step_status_${step_name}="success"
+          onFailure:
+            - add_pipeline_variables step_status_${step_name}="failure"
 
-#pipelines:
-#  - name: npm_sample
-#    steps:
-#      - name: npm_build_step
-#        type: NpmBuild
-#        configuration:
-#          repositoryName: npm-virtual
-#          sourceLocation: ./
-#          integrations:
-#            - name: demo_art
-#          inputResources:
-#            - name: gosvc_gitRepo         # required
-#      - name: npm_publish_step
-#        type: NpmPublish
-#        configuration:
-#          repositoryName: npm-virtual        # required, npm repository name on artifactory
-#          autoPublishBuildInfo: true       # optional
-#          integrations:
-#            - name: demo_art      # required
-#          inputSteps:
-#            - name: npm_build_step                # required
-#          outputResources:
-#            - name: npm_example_buildinfo_jfp                 # optional
+#  - name: router_docker_security_scan
+#    type: XrayScan
+#    configuration:
+#      failOnScan: true
+#      integrations:
+#        - name: entplus_deployer
+#        - name: docker_jfrog_io_reader
+#        - name: slack_router_pipe
+#        - name: slack_platform_clean_pipeline
+#        - name: slack_platform_release_pipeline
+#      inputResources:
+#        - name: router_docker_build_info
+#        - name: artifactory_monorepo_bitbucket
+#          trigger: false
+#    execution:
+#      onStart:
+#        - source "${res_artifactory_monorepo_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+#        - xrayScan_on_start
+#      onSuccess:
+#        - stepCommons_on_success
+#      onFailure:
+#        - stepCommons_on_failure
+
+
+#
+#  - name: metadata_package_maven
+#      type: MvnBuild
+#      configuration:
+#        #      priority: 1 TODO: Ignore until PIPE-2790 is fixed
+#        sourceLocation: metadata
+#        configFileLocation: ../build/ci/.conf
+#        configFileName: maven-config
+#        mvnCommand: install ${MAVEN_CONFIG}
+#        inputResources:
+#          - name: jenkins_metadata_bin_build_info
+#          - name: metadata_bitbucket
+#            trigger: true
+#        integrations:
+#          - name: entplus_deployer
+#          - name: docker_jfrog_io_reader
+#          - name: slack_metadata_pipe
+#          - name: slack_platform_clean_pipeline
+#          - name: slack_platform_release_pipeline
+#        outputResources:
+#          - name: metadata_maven_build_info
+#        runtime:
+#          type: image
+#          image:
+#            auto:
+#              language: java
+#              versions:
+#                - 11
+#      execution:
+#        onStart:
+#          - source "${res_metadata_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+#          - stepCommons_load_script metadata/build/ci/pipelines_package_maven.sh
+#          - on_start
+#        onSuccess:
+#          - stepCommons_on_success
+#          - on_success
+#        onFailure:
+#          - stepCommons_on_failure
+#        onComplete:
+#          - on_complete
+#
+#
+#
+
+
+
+
+
+
+
+
+  - name: p2p_common
+      type: Bash
+      configuration:
+        runtime:
+          type: image
+          image:
+            auto:
+              language: go
+              versions:
+                - 1.13.7
+        inputResources:
+          - name: p2p_bitbucket
+            trigger: true
+          - name: go_commons_go_module_build_info
+          - name: router_grpc_go_module_build_info
+          - name: access_grpc_go_module_build_info
+          - name: access_go_client_go_module_build_info
+        outputResources:
+          - name: p2p_common_go_module_build_info
+        integrations:
+          - name: entplus_deployer
+          - name: docker_jfrog_io_reader
+          - name: slack_artifactory_pipe
+          - name: slack_platform_clean_pipeline
+          - name: slack_platform_release_pipeline
+        environmentVariables:
+          REUSE_VERSION_VAR: p2p_go_snapshot_version
+      execution:
+        onStart:
+          - source "${res_p2p_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+          - stepCommons_load_script p2p/build/ci/pipelines_build_common.sh
+          - on_start
+        onExecute:
+          - on_execute
+        onSuccess:
+          - stepCommons_on_success --step-status-group=critical_path
+        onFailure:
+          - stepCommons_on_failure --step-status-group=critical_path
+        onComplete:
+          - on_complete
+
+
+
+
+
+
+      - name: buildInstaller
+        type: Bash
+        configuration:
+          inputSteps:
+            - name: initilizeBuild
+          inputResources:
+            - name: jfrog_installer_commons_bitbucket
+          integrations:
+            - name: entplus_deployer
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_commons_bitbucket_resourcePath}
+          onExecute:
+            - build/ci/buildScript.sh
+            - mkdir -p configuration-manager
+            - cp scripts/* configuration-manager
+            - tar -zcvf configuration-manager-bash.tar.gz configuration-manager
+          onComplete:
+            - popd
+          onSuccess:
+            - add_pipeline_variables step_status_${step_name}="success"
+          onFailure:
+            - add_pipeline_variables step_status_${step_name}="failure"
+
+
+
+
+      - name: deployInstaller1
+        type: MvnBuild
+        configuration:
+          inputSteps:
+            - name: buildInstaller
+          sourceLocation: ./
+          configFileLocation: ./.conf
+          configFileName: maven-config
+          mvnCommand: install -s ./.conf/settings.xml
+          inputResources:
+            - name: jfrog_installer_commons_bitbucket
+          integrations:
+            - name: entplus_deployer
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_commons_bitbucket_resourcePath}
+            - mkdir -p configuration-manager
+            - cp scripts/* configuration-manager
+            - tar -zcvf configuration-manager-bash.tar.gz configuration-manager
+            - source build/ci/deployInstaller.sh
+            - on_start
+          onComplete:
+            - popd
+          onSuccess:
+            - add_pipeline_variables step_status_${step_name}="success"
+          onFailure:
+            - add_pipeline_variables step_status_${step_name}="failure"
