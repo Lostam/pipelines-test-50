@@ -40,7 +40,7 @@ pipelines:
             inputResources:
               - name: MyPropBag1
               - name: XREnGEFasfghjsfgjsfasfasfeDwmE
-                branch: branch-2
+                branch: branch-XXX
           execution:
             onExecute:
               - echo "Hi"
