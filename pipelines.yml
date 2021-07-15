@@ -29,128 +29,46 @@ pipelines:
             - add_pipeline_variables step_status_${step_name}="success"
           onFailure:
             - add_pipeline_variables step_status_${step_name}="failure"
-
-#  - name: router_docker_security_scan
-#    type: XrayScan
-#    configuration:
-#      failOnScan: true
-#      integrations:
-#        - name: entplus_deployer
-#        - name: docker_jfrog_io_reader
-#        - name: slack_router_pipe
-#        - name: slack_platform_clean_pipeline
-#        - name: slack_platform_release_pipeline
-#      inputResources:
-#        - name: router_docker_build_info
-#        - name: artifactory_monorepo_bitbucket
-#          trigger: false
-#    execution:
-#      onStart:
-#        - source "${res_artifactory_monorepo_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
-#        - xrayScan_on_start
-#      onSuccess:
-#        - stepCommons_on_success
-#      onFailure:
-#        - stepCommons_on_failure
-
-
-#
-#  - name: metadata_package_maven
-#      type: MvnBuild
-#      configuration:
-#        #      priority: 1 TODO: Ignore until PIPE-2790 is fixed
-#        sourceLocation: metadata
-#        configFileLocation: ../build/ci/.conf
-#        configFileName: maven-config
-#        mvnCommand: install ${MAVEN_CONFIG}
-#        inputResources:
-#          - name: jenkins_metadata_bin_build_info
-#          - name: metadata_bitbucket
-#            trigger: true
-#        integrations:
-#          - name: entplus_deployer
-#          - name: docker_jfrog_io_reader
-#          - name: slack_metadata_pipe
-#          - name: slack_platform_clean_pipeline
-#          - name: slack_platform_release_pipeline
-#        outputResources:
-#          - name: metadata_maven_build_info
-#        runtime:
-#          type: image
-#          image:
-#            auto:
-#              language: java
-#              versions:
-#                - 11
-#      execution:
-#        onStart:
-#          - source "${res_metadata_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
-#          - stepCommons_load_script metadata/build/ci/pipelines_package_maven.sh
-#          - on_start
-#        onSuccess:
-#          - stepCommons_on_success
-#          - on_success
-#        onFailure:
-#          - stepCommons_on_failure
-#        onComplete:
-#          - on_complete
-#
-#
-#
-
-
-
-
-
-
-
-
-  - name: p2p_common
-      type: Bash
-      configuration:
-        runtime:
-          type: image
-          image:
-            auto:
-              language: go
-              versions:
-                - 1.13.7
-        inputResources:
-          - name: p2p_bitbucket
-            trigger: true
-          - name: go_commons_go_module_build_info
-          - name: router_grpc_go_module_build_info
-          - name: access_grpc_go_module_build_info
-          - name: access_go_client_go_module_build_info
-        outputResources:
-          - name: p2p_common_go_module_build_info
-        integrations:
-          - name: entplus_deployer
-          - name: docker_jfrog_io_reader
-          - name: slack_artifactory_pipe
-          - name: slack_platform_clean_pipeline
-          - name: slack_platform_release_pipeline
-        environmentVariables:
-          REUSE_VERSION_VAR: p2p_go_snapshot_version
-      execution:
-        onStart:
-          - source "${res_p2p_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
-          - stepCommons_load_script p2p/build/ci/pipelines_build_common.sh
-          - on_start
-        onExecute:
-          - on_execute
-        onSuccess:
-          - stepCommons_on_success --step-status-group=critical_path
-        onFailure:
-          - stepCommons_on_failure --step-status-group=critical_path
-        onComplete:
-          - on_complete
-
-
-
-
-
-
+      - name: p2p_common
+        type: Bash
+        configuration:
+          runtime:
+            type: image
+            image:
+              auto:
+                language: go
+                versions:
+                  - 1.13.7
+          inputResources:
+            - name: p2p_bitbucket
+              trigger: true
+            - name: go_commons_go_module_build_info
+            - name: router_grpc_go_module_build_info
+            - name: access_grpc_go_module_build_info
+            - name: access_go_client_go_module_build_info
+          outputResources:
+            - name: p2p_common_go_module_build_info
+          integrations:
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: slack_artifactory_pipe
+            - name: slack_platform_clean_pipeline
+            - name: slack_platform_release_pipeline
+          environmentVariables:
+            REUSE_VERSION_VAR: p2p_go_snapshot_version
+        execution:
+          onStart:
+            - source "${res_p2p_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script p2p/build/ci/pipelines_build_common.sh
+            - on_start
+          onExecute:
+            - on_execute
+          onSuccess:
+            - stepCommons_on_success --step-status-group=critical_path
+          onFailure:
+            - stepCommons_on_failure --step-status-group=critical_path
+          onComplete:
+            - on_complete
       - name: buildInstaller
         type: Bash
         configuration:
@@ -174,10 +92,6 @@ pipelines:
             - add_pipeline_variables step_status_${step_name}="success"
           onFailure:
             - add_pipeline_variables step_status_${step_name}="failure"
-
-
-
-
       - name: deployInstaller1
         type: MvnBuild
         configuration:
