@@ -1,0 +1,1135 @@
+pipelines:
+  - name: access_build
+    #CI_PIPELINE_URL=https://entplus.jfrog.io/ui/pipelines/myPipelines/access_poc?branch=${GIT_BRANCH_URLENCODED}
+    configuration:
+      nodePool: gcp_node_ubuntu_16
+      environmentVariables:
+        readOnly:
+          JFROG_CLI_TEMP_DIR: /tmp
+          CI: "true"
+          MAVEN_OPTS: "'-Dorg.slf4j.simpleLogger.showDateTime=true -Dorg.slf4j.simpleLogger.dateTimeFormat=HH:mm:ss,SSS -Dmaven.wagon.http.pool=false'"
+          MAVEN_CONFIG: "'-B -nsu -e'"
+          SLACK_MAIN_INTEGRATION: slack_platform_clean_pipeline
+          SLACK_RELEASE_INTEGRATION: slack_platform_release_pipeline
+          GOSUMDB: off
+          GOPRIVATE: jfrog.com
+          GONOPROXY: none
+          GO_VERSION: 1.15.11
+    steps:
+      #JAVA STEPS
+      - name: access_common
+        type: MvnBuild
+        configuration:
+          #      priority: 1 TODO: Ignore until PIPE-2790 is fixed
+          affinityGroup: sonar_access_common
+          chronological: true
+          sourceLocation: access
+          configFileLocation: ../build/ci/.conf
+          configFileName: maven-config
+          mvnCommand: ${MVN_COMMAND}
+          inputResources:
+            - name: access_common_bitbucket
+            - name: commons_pro_java_module_build_info
+              trigger: false
+            - name: router_grpc_java_module_build_info
+              trigger: false
+            - name: access_grpc_java_module_build_info
+          outputResources:
+            - name: access_common_java_module_build_info
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: slack_access_pipe
+            - name: slack_platform_clean_pipeline
+            - name: slack_platform_release_pipeline
+          runtime:
+            type: image
+            image:
+              auto:
+                language: java
+                versions:
+                  - 11
+        execution:
+          onStart:
+            - source "${res_access_common_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access/build/ci/pipelines_common_build.sh
+            - on_start
+          onSuccess:
+            - stepCommons_on_success --step-status-group=critical_path
+            - on_success
+          onFailure:
+            - stepCommons_on_failure --step-status-group=critical_path
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete
+      - name: access_server
+        type: MvnBuild
+        configuration:
+          #      priority: 1 TODO: Ignore until PIPE-2790 is fixed
+          chronological: true
+          sourceLocation: access/server
+          configFileLocation: ../../build/ci/.conf
+          configFileName: maven-config
+          mvnCommand: ${MVN_COMMAND}
+          inputResources:
+            - name: access_server_bitbucket
+            - name: access_common_java_module_build_info
+          outputResources:
+            - name: access_server_java_module_build_info
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: slack_access_pipe
+            - name: slack_platform_clean_pipeline
+            - name: slack_platform_release_pipeline
+          runtime:
+            type: image
+            image:
+              auto:
+                language: java
+                versions:
+                  - 11
+        execution:
+          onStart:
+            - source "${res_access_server_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access/build/ci/pipelines_server_build.sh
+            - on_start
+          onSuccess:
+            - stepCommons_on_success --step-status-group=critical_path
+            - on_success
+          onFailure:
+            - stepCommons_on_failure --step-status-group=critical_path
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete
+      - name: access_pro
+        type: MvnBuild
+        configuration:
+          #      priority: 1 TODO: Ignore until PIPE-2790 is fixed
+          chronological: true
+          sourceLocation: access-pro
+          configFileLocation: ../build/ci/.conf
+          configFileName: maven-config
+          mvnCommand: ${MVN_COMMAND}
+          inputResources:
+            - name: access_pro_bitbucket
+            - name: access_server_java_module_build_info
+          outputResources:
+            - name: access_post_release_step_property_bag
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: slack_access_pipe
+            - name: slack_platform_clean_pipeline
+            - name: slack_platform_release_pipeline
+          runtime:
+            type: image
+            image:
+              auto:
+                language: java
+                versions:
+                  - 11
+        execution:
+          onStart:
+            - source "${res_access_pro_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access/build/ci/pipelines_pro_build.sh
+            - on_start
+          onSuccess:
+            - stepCommons_on_success --step-status-group=critical_path
+            - on_success
+          onFailure:
+            - stepCommons_on_failure --step-status-group=critical_path
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete
+      - name: access_java_client
+        type: MvnBuild
+        configuration:
+          #      priority: 1 TODO: Ignore until PIPE-2790 is fixed
+          chronological: true
+          sourceLocation: access/client
+          configFileLocation: ../../build/ci/.conf
+          configFileName: maven-config
+          mvnCommand: ${MVN_COMMAND}
+          inputResources:
+            - name: access_java_client_bitbucket
+            - name: access_server_java_module_build_info
+          outputResources:
+            - name: access_java_client_module_build_info
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: slack_access_pipe
+            - name: slack_platform_clean_pipeline
+            - name: slack_platform_release_pipeline
+          runtime:
+            type: image
+            image:
+              auto:
+                language: java
+                versions:
+                  - 11
+        execution:
+          onStart:
+            - source "${res_access_java_client_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access/build/ci/pipelines_client_build.sh
+            - on_start
+          onSuccess:
+            - stepCommons_on_success --step-status-group=critical_path
+            - on_success
+          onFailure:
+            - stepCommons_on_failure --step-status-group=critical_path
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete
+      - name: access_package
+        type: MvnBuild
+        configuration:
+          sourceLocation: access/server/distribution/docker
+          configFileLocation: ../../../../build/ci/.conf
+          configFileName: maven-config
+          mvnCommand: install -Prelease,docker -DskipTests ${MAVEN_CONFIG}
+          inputResources:
+            - name: access_server_bitbucket
+            - name: access_server_java_module_build_info
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: art_jfrog_io
+            - name: slack_access_pipe
+            - name: slack_platform_clean_pipeline
+            - name: slack_platform_release_pipeline
+          outputResources:
+            - name: access_art_jfrog_io_docker_image
+            - name: access_maven_build_info
+          runtime:
+            type: image
+            image:
+              auto:
+                language: java
+                versions:
+                  - 11
+        execution:
+          onStart:
+            - source "${res_access_server_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access/build/ci/pipelines_package.sh
+            - on_start
+          onSuccess:
+            - stepCommons_on_success
+            - on_success
+          onFailure:
+            - stepCommons_on_failure
+          onComplete:
+            - stepCommons_pre_on_complete
+            - stepCommons_on_complete
+      - name: access_server_itest
+        type: MvnBuild
+        configuration:
+          affinityGroup: sonar_access_server
+          chronological: true
+          sourceLocation: access/server
+          configFileLocation: ../../build/ci/.conf
+          configFileName: maven-config
+          mvnCommand: ${MVN_COMMAND}
+          runtime:
+            type: image
+            image:
+              auto:
+                language: java
+                versions:
+                  - 11
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_ci_jfrogdev_org
+            - name: docker_jfrog_io_reader
+            - name: entplus_deployer
+          inputResources:
+            - name: access_server_bitbucket
+            - name: access_server_java_module_build_info
+        execution:
+          onStart:
+            - source "${res_access_server_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access/build/ci/pipelines_server_itest.sh
+            - on_start
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete
+          onSuccess:
+            - stepCommons_on_success --step-status-group=critical_path
+            - on_success
+          onFailure:
+            - stepCommons_on_failure --step-status-group=critical_path
+      - name: access_client_itest
+        type: MvnBuild
+        configuration:
+          affinityGroup: sonar_access_client
+          chronological: true
+          sourceLocation: access/client
+          configFileLocation: ../../build/ci/.conf
+          configFileName: maven-config
+          mvnCommand: ${MVN_COMMAND}
+          runtime:
+            type: image
+            image:
+              auto:
+                language: java
+                versions:
+                  - 11
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_ci_jfrogdev_org
+            - name: docker_jfrog_io_reader
+            - name: entplus_deployer
+          inputResources:
+            - name: access_java_client_bitbucket
+            - name: access_server_java_module_build_info
+            - name: access_java_client_module_build_info
+        execution:
+          onStart:
+            - source "${res_access_java_client_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access/build/ci/pipelines_client_itest.sh
+            - on_start
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete
+          onSuccess:
+            - stepCommons_on_success --step-status-group=critical_path
+            - on_success
+          onFailure:
+            - stepCommons_on_failure --step-status-group=critical_path
+      - name: access_server_sonar_scan
+        type: Bash
+        configuration:
+          affinityGroup: sonar_access_server
+          inputSteps:
+            - name: access_server_itest
+          inputResources:
+            - name: access_server_bitbucket
+          outputResources:
+            - name: access_post_release_step_property_bag
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: slack_artifactory_pipe
+            - name: slack_platform_clean_pipeline
+            - name: slack_platform_release_pipeline
+            - name: sonar_jfrog_info
+            - name: entplus_jfrog_io_docker
+          environmentVariables:
+            SONAR_PROJECT_KEY: 'access_server'
+            SONAR_PROJECT_BASE_DIR: './access/server'
+            SONAR_QUALITYGATE_WAIT: 'false'
+          runtime:
+            type: image
+            image:
+              custom:
+                registry: entplus_jfrog_io_docker
+                sourceRepository: docker-staging-local
+                name: entplus.jfrog.io/docker-staging-local/sonar-scanner
+                tag: ${SONAR_DOCKER_TAG:-latest}
+        execution:
+          onStart:
+            - source "${res_access_server_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access/build/ci/pipelines_sonar_java.sh
+            - on_start
+          onExecute:
+            - on_execute
+          onSuccess:
+            - stepCommons_on_success
+            - on_success
+          onFailure:
+            - stepCommons_on_failure
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete
+      - name: access_client_sonar_scan
+        type: Bash
+        configuration:
+          affinityGroup: sonar_access_client
+          inputSteps:
+            - name: access_client_itest
+          inputResources:
+            - name: access_java_client_bitbucket
+          outputResources:
+            - name: access_post_release_step_property_bag
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: slack_artifactory_pipe
+            - name: slack_platform_clean_pipeline
+            - name: slack_platform_release_pipeline
+            - name: sonar_jfrog_info
+            - name: entplus_jfrog_io_docker
+          environmentVariables:
+            SONAR_PROJECT_KEY: 'access_java_client'
+            SONAR_PROJECT_BASE_DIR: './access/client'
+            SONAR_QUALITYGATE_WAIT: 'false'
+          runtime:
+            type: image
+            image:
+              custom:
+                registry: entplus_jfrog_io_docker
+                sourceRepository: docker-staging-local
+                name: entplus.jfrog.io/docker-staging-local/sonar-scanner
+                tag: ${SONAR_DOCKER_TAG:-latest}
+        execution:
+          onStart:
+            - source "${res_access_java_client_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access/build/ci/pipelines_sonar_java.sh
+            - on_start
+          onExecute:
+            - on_execute
+          onSuccess:
+            - stepCommons_on_success
+            - on_success
+          onFailure:
+            - stepCommons_on_failure
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete
+      - name: access_common_sonar_scan
+        type: Bash
+        configuration:
+          affinityGroup: sonar_access_common
+          inputSteps:
+            - name: access_common
+          inputResources:
+            - name: access_common_bitbucket
+          outputResources:
+            - name: access_post_release_step_property_bag
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: slack_artifactory_pipe
+            - name: slack_platform_clean_pipeline
+            - name: slack_platform_release_pipeline
+            - name: sonar_jfrog_info
+            - name: entplus_jfrog_io_docker
+          environmentVariables:
+            SONAR_PROJECT_KEY: 'access_java_common'
+            SONAR_PROJECT_BASE_DIR: './access/common'
+            SONAR_QUALITYGATE_WAIT: 'false'
+          runtime:
+            type: image
+            image:
+              custom:
+                registry: entplus_jfrog_io_docker
+                sourceRepository: docker-staging-local
+                name: entplus.jfrog.io/docker-staging-local/sonar-scanner
+                tag: ${SONAR_DOCKER_TAG:-latest}
+        execution:
+          onStart:
+            - source "${res_access_common_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access/build/ci/pipelines_sonar_java.sh
+            - on_start
+          onExecute:
+            - on_execute
+          onSuccess:
+            - stepCommons_on_success
+            - on_success
+          onFailure:
+            - stepCommons_on_failure
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete
+      - name: access_security_scan
+        type: XrayScan
+        configuration:
+          failOnScan: false
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: slack_access_pipe
+            - name: slack_platform_clean_pipeline
+            - name: slack_platform_release_pipeline
+          inputResources:
+            - name: access_server_java_module_build_info
+            - name: access_server_bitbucket
+          outputResources:
+            - name: access_post_release_step_property_bag
+        execution:
+          onStart:
+            - source "${res_access_server_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - xrayScan_on_start
+          onSuccess:
+            - stepCommons_on_success
+          onFailure:
+            - stepCommons_on_failure
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete
+      - name: access_client_security_scan
+        type: XrayScan
+        configuration:
+          failOnScan: false
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: slack_access_pipe
+            - name: slack_platform_clean_pipeline
+            - name: slack_platform_release_pipeline
+          inputResources:
+            - name: access_java_client_module_build_info
+            - name: access_java_client_bitbucket
+          outputResources:
+            - name: access_post_release_step_property_bag
+        execution:
+          onStart:
+            - source "${res_access_java_client_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - xrayScan_on_start
+          onSuccess:
+            - stepCommons_on_success
+          onFailure:
+            - stepCommons_on_failure
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete
+      - name: access_server_clamscan
+        type: Bash
+        configuration:
+          integrations:
+            - name: docker_jfrog_io_reader
+            - name: entplus_jfrog_io_docker
+            - name: entplus_deployer
+          inputResources:
+            - name: access_art_jfrog_io_docker_image
+            - name: access_server_bitbucket
+              trigger: false
+          outputResources:
+            - name: access_post_release_step_property_bag
+        execution:
+          onStart:
+            - source "${res_access_server_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access/build/ci/pipelines_clamav.sh
+          onExecute:
+            - clam_execute
+          onSuccess:
+            - stepCommons_on_success
+          onFailure:
+            - stepCommons_on_failure
+          onComplete:
+            - stepCommons_pre_on_complete
+            - clam_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete
+      - name: access_grpc_maven
+        type: MvnBuild
+        configuration:
+          #      priority: 1 TODO: Ignore until PIPE-2790 is fixed
+          chronological: true
+          sourceLocation: access/grpc-api/maven
+          configFileLocation: ../../../build/ci/.conf
+          configFileName: maven-config
+          mvnCommand: install ${MAVEN_CONFIG}
+          inputResources:
+            - name: access_grpc_api_bitbucket
+            - name: parent_pom_java_module_build_info
+              trigger: false
+          outputResources:
+            - name: access_grpc_java_module_build_info
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: slack_access_pipe
+            - name: slack_platform_clean_pipeline
+            - name: slack_platform_release_pipeline
+          runtime:
+            type: image
+            image:
+              auto:
+                language: java
+                versions:
+                  - 11
+        execution:
+          onStart:
+            - source "${res_access_grpc_api_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access/grpc-api/build/ci/pipelines_build_maven.sh
+            - on_start
+          onSuccess:
+            - stepCommons_on_success --step-status-group=critical_path
+            - on_success
+          onFailure:
+            - stepCommons_on_failure --step-status-group=critical_path
+          onComplete:
+            - stepCommons_pre_on_complete
+            - stepCommons_on_complete
+      #NODEJS STEPS
+      - name: access_grpc_npm
+        type: Bash
+        configuration:
+          chronological: true
+          runtime:
+            type: image
+            image:
+              auto:
+                language: node
+                versions:
+                  - 12.14.0
+          inputResources:
+            - name: access_grpc_bitbucket
+          outputResources:
+            - name: access_grpc_npm_build_info
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: slack_access_pipe
+            - name: slack_platform_clean_pipeline
+            - name: slack_platform_release_pipeline
+        execution:
+          onStart:
+            - source "${res_access_grpc_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access/grpc-api/build/ci/pipelines_build_npm.sh
+            - on_start
+          onExecute:
+            - on_execute
+          onSuccess:
+            - stepCommons_on_success --step-status-group=critical_path
+            - on_success
+          onFailure:
+            - stepCommons_on_failure --step-status-group=critical_path
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete
+      - name: access_nodejs_client
+        type: Bash
+        configuration:
+          chronological: true
+          runtime:
+            type: image
+            image:
+              custom:
+                name: docker.bintray.io/jfrog/pipelines-u16node
+                tag: "12.14.0"
+                options: "--net=host"
+          inputResources:
+            - name: access_nodejs_client_bitbucket
+            - name: access_grpc_npm_build_info
+            - name: router_grpc_npm_build_info
+              trigger: false
+            - name: nodejs_commons_npm_module_build_info
+              trigger: false
+          outputResources:
+            - name: access_nodejs_client_build_info
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: slack_platform_ui_pipe
+            - name: slack_platform_clean_pipeline
+            - name: slack_platform_release_pipeline
+        execution:
+          onStart:
+            - source "${res_access_nodejs_client_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access-nodejs-client/build/ci/pipelines_build.sh
+            - on_start
+          onExecute:
+            - on_execute
+          onSuccess:
+            - stepCommons_on_success --step-status-group=critical_path
+            - on_success
+          onFailure:
+            - stepCommons_on_failure --step-status-group=critical_path
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete
+      - name: access_nodejs_client_itest
+        type: Bash
+        configuration:
+          affinityGroup: sonar_access_nodejs_client
+          chronological: true
+          runtime:
+            type: image
+            image:
+              custom:
+                name: docker.bintray.io/jfrog/pipelines-u16node
+                tag: "12.14.0"
+                options: "--net=host"
+          inputResources:
+            - name: access_nodejs_client_bitbucket
+            - name: router_grpc_npm_build_info
+              trigger: false
+            - name: nodejs_commons_npm_module_build_info
+              trigger: false
+            - name: access_art_jfrog_io_docker_image
+            - name: router_art_jfrog_io_docker_image
+              trigger: false
+            - name: access_nodejs_client_build_info
+          outputResources:
+            - name: access_post_release_step_property_bag
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: slack_platform_ui_pipe
+            - name: slack_platform_clean_pipeline
+            - name: slack_platform_release_pipeline
+        execution:
+          onStart:
+            - source "${res_access_nodejs_client_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access-nodejs-client/build/ci/pipelines_itest.sh
+            - on_start
+          onExecute:
+            - on_execute
+          onSuccess:
+            - stepCommons_on_success
+            - on_success
+          onFailure:
+            - stepCommons_on_failure
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete
+      - name: access_nodejs_client_sonar_scan
+        type: Bash
+        configuration:
+          affinityGroup: sonar_access_nodejs_client
+          inputSteps:
+            - name: access_nodejs_client_itest
+          inputResources:
+            - name: access_nodejs_client_bitbucket
+          outputResources:
+            - name: access_post_release_step_property_bag
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: slack_artifactory_pipe
+            - name: slack_platform_clean_pipeline
+            - name: slack_platform_release_pipeline
+            - name: sonar_jfrog_info
+            - name: entplus_jfrog_io_docker
+          environmentVariables:
+            SONAR_PROJECT_KEY: 'access_nodejs_client'
+            SONAR_PROJECT_BASE_DIR: './access-nodejs-client/'
+            SONAR_QUALITYGATE_WAIT: 'false'
+          runtime:
+            type: image
+            image:
+              custom:
+                registry: entplus_jfrog_io_docker
+                sourceRepository: docker-staging-local
+                name: entplus.jfrog.io/docker-staging-local/sonar-scanner
+                tag: ${SONAR_DOCKER_TAG:-latest}
+        execution:
+          onStart:
+            - source "${res_access_nodejs_client_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access-nodejs-client/build/ci/pipelines_sonar_npm.sh
+            - on_start
+          onExecute:
+            - on_execute
+          onSuccess:
+            - stepCommons_on_success
+            - on_success
+          onFailure:
+            - stepCommons_on_failure
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete
+      #GO STEPS
+      - name: access_go_client
+        type: Bash
+        configuration:
+          chronological: true
+          runtime:
+            type: image
+            image:
+              auto:
+                language: go
+                versions:
+                  - 1.13.7
+          inputResources:
+            - name: access_go_client_bitbucket
+            - name: go_commons_go_module_build_info
+              trigger: false
+            - name: router_grpc_go_module_build_info
+              trigger: false
+            - name: access_grpc_go_module_build_info
+          outputResources:
+            - name: access_go_client_go_module_build_info
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: slack_access_pipe
+            - name: slack_platform_clean_pipeline
+            - name: slack_platform_release_pipeline
+        execution:
+          onStart:
+            - source "${res_access_go_client_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access-go-client/build/ci/pipelines_build.sh
+            - on_start
+          onExecute:
+            - on_execute
+          onSuccess:
+            - stepCommons_on_success --step-status-group=critical_path
+            - on_success
+          onFailure:
+            - stepCommons_on_failure --step-status-group=critical_path
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete
+      - name: access_go_client_sonar_scan
+        type: Bash
+        configuration:
+          affinityGroup: sonar_access_go_client
+          inputSteps:
+            - name: access_go_client_itest
+          inputResources:
+            - name: access_go_client_bitbucket
+          outputResources:
+            - name: access_post_release_step_property_bag
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: slack_artifactory_pipe
+            - name: slack_platform_clean_pipeline
+            - name: slack_platform_release_pipeline
+            - name: sonar_jfrog_info
+            - name: entplus_jfrog_io_docker
+          environmentVariables:
+            SONAR_PROJECT_KEY: 'access_go_client'
+            SONAR_PROJECT_BASE_DIR: './access-go-client/'
+            SONAR_QUALITYGATE_WAIT: 'false'
+          runtime:
+            type: image
+            image:
+              custom:
+                registry: entplus_jfrog_io_docker
+                sourceRepository: docker-staging-local
+                name: entplus.jfrog.io/docker-staging-local/sonar-scanner
+                tag: ${SONAR_DOCKER_TAG:-latest}
+        execution:
+          onStart:
+            - source "${res_access_go_client_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access-go-client/build/ci/pipelines_sonar_go.sh
+            - on_start
+          onExecute:
+            - on_execute
+          onSuccess:
+            - stepCommons_on_success
+            - on_success
+          onFailure:
+            - stepCommons_on_failure
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete
+      - name: access_cli_plugin_build
+        type: Bash
+        configuration:
+          affinityGroup: sonar_access_cli_plugin
+          chronological: true
+          runtime:
+            type: image
+            image:
+              auto:
+                language: go
+                versions:
+                  - 1.13.7
+          inputResources:
+            - name: access_go_client_go_module_build_info
+            - name: access_cli_plugin_bitbucket
+            - name: access_art_jfrog_io_docker_image
+              trigger: false
+            - name: router_art_jfrog_io_docker_image
+              trigger: false
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: slack_access_pipe
+          outputResources:
+            - name: access_cli_plugin_go_module_build_info
+        execution:
+          onStart:
+            - source "${res_access_cli_plugin_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access-go-client/_cli/build/ci/pipelines_build.sh
+            - on_start
+          onExecute:
+            - on_execute
+          onSuccess:
+            - stepCommons_on_success
+            - on_success
+          onFailure:
+            - stepCommons_on_failure
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete
+      - name: access_cli_plugin_sonar_scan
+        type: Bash
+        configuration:
+          affinityGroup: sonar_access_cli_plugin
+          inputSteps:
+            - name: access_cli_plugin_build
+          inputResources:
+            - name: access_cli_plugin_bitbucket
+          outputResources:
+            - name: access_post_release_step_property_bag
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: slack_artifactory_pipe
+            - name: slack_platform_clean_pipeline
+            - name: slack_platform_release_pipeline
+            - name: sonar_jfrog_info
+            - name: entplus_jfrog_io_docker
+          environmentVariables:
+            SONAR_PROJECT_KEY: 'access_cli_plugin'
+            SONAR_PROJECT_BASE_DIR: './access-go-client/_cli/'
+            SONAR_QUALITYGATE_WAIT: 'false'
+          runtime:
+            type: image
+            image:
+              custom:
+                registry: entplus_jfrog_io_docker
+                sourceRepository: docker-staging-local
+                name: entplus.jfrog.io/docker-staging-local/sonar-scanner
+                tag: ${SONAR_DOCKER_TAG:-latest}
+        execution:
+          onStart:
+            - source "${res_access_cli_plugin_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access-go-client/_cli/build/ci/pipelines_sonar_go.sh
+            - on_start
+          onExecute:
+            - on_execute
+          onSuccess:
+            - stepCommons_on_success
+            - on_success
+          onFailure:
+            - stepCommons_on_failure
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete
+      - name: access_cli_plugin_bin
+        type: Bash
+        configuration:
+          runtime:
+            type: image
+            image:
+              auto:
+                language: go
+                versions:
+                  - 1.13.7
+          inputSteps:
+            - name: access_cli_plugin_build
+          inputResources:
+            - name: access_cli_plugin_bitbucket
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+          outputResources:
+            - name: access_cli_plugin_bin_build_info
+            - name: access_post_release_step_property_bag
+        execution:
+          onStart:
+            - source "${res_access_cli_plugin_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access-go-client/_cli/build/ci/pipelines_bin.sh
+            - on_start
+          onExecute:
+            - on_execute
+          onSuccess:
+            - stepCommons_on_success
+            - on_success
+          onFailure:
+            - stepCommons_on_failure
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete
+            - stepCommons_on_complete
+      - name: access_go_client_security_scan
+        type: XrayScan
+        configuration:
+          failOnScan: false
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: slack_access_pipe
+            - name: slack_platform_clean_pipeline
+            - name: slack_platform_release_pipeline
+          inputResources:
+            - name: access_go_client_go_module_build_info
+            - name: access_go_client_bitbucket
+          outputResources:
+            - name: access_post_release_step_property_bag
+        execution:
+          onStart:
+            - source "${res_access_go_client_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - xrayScan_on_start
+          onSuccess:
+            - stepCommons_on_success
+          onFailure:
+            - stepCommons_on_failure
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete
+      - name: access_go_client_itest
+        type: Bash
+        configuration:
+          affinityGroup: sonar_access_go_client
+          runtime:
+            type: image
+            image:
+              auto:
+                language: go
+                versions:
+                  - 1.13.7
+          inputResources:
+            - name: access_go_client_bitbucket
+            - name: access_go_client_go_module_build_info
+            - name: access_art_jfrog_io_docker_image
+            - name: router_art_jfrog_io_docker_image
+              trigger: false
+          outputResources:
+            - name: access_post_release_step_property_bag
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: slack_access_pipe
+            - name: slack_platform_clean_pipeline
+            - name: slack_platform_release_pipeline
+        execution:
+          onStart:
+            - source "${res_access_go_client_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access-go-client/build/ci/pipelines_itest.sh
+            - on_start
+          onExecute:
+            - on_execute
+          onSuccess:
+            - on_success
+            - stepCommons_on_success
+          onFailure:
+            - stepCommons_on_failure
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete
+      - name: access_grpc_go
+        type: Bash
+        configuration:
+          chronological: true
+          runtime:
+            type: image
+            image:
+              auto:
+                language: go
+                versions:
+                  - 1.13.7
+          inputResources:
+            - name: access_grpc_bitbucket
+          outputResources:
+            - name: access_grpc_go_module_build_info
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: slack_access_pipe
+            - name: slack_platform_clean_pipeline
+            - name: slack_platform_release_pipeline
+        execution:
+          onStart:
+            - source "${res_access_grpc_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access/grpc-api/build/ci/pipelines_build_go.sh
+            - on_start
+          onExecute:
+            - on_execute
+          onSuccess:
+            - stepCommons_on_success --step-status-group=critical_path
+            - on_success
+          onFailure:
+            - stepCommons_on_failure --step-status-group=critical_path
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete
+
+      - name: trigger_post_release
+        type: Bash
+        configuration:
+          inputResources:
+            - name: access_post_release_step_property_bag
+            - name: artifactory_monorepo_bitbucket
+              trigger: false
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_pipelines
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+          outputResources:
+            - name: access_release_bitbucket
+        execution:
+          onStart:
+            - source "${res_artifactory_monorepo_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script build/ci/scripts/trigger_post_release_pipeline.sh
+            - on_start
+          onExecute:
+            - on_execute
+
+      - name: access_server_artifactory_package_docker
+        type: Bash
+        configuration:
+          inputResources:
+            - name: access_server_bitbucket
+              trigger: true
+            - name: access_server_java_module_build_info
+          outputResources:
+            - name: access_docker_build_info
+            - name: access_server_arti_bundle_jfrog_io_docker_image
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: art_jfrog_io
+            - name: slack_access_pipe
+            - name: slack_platform_clean_pipeline
+            - name: slack_platform_release_pipeline
+        execution:
+          onStart:
+            - source "${res_access_server_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script access/build/ci/pipelines_package_docker.sh
+            - on_start
+          onExecute:
+            - on_execute
+          onSuccess:
+            - stepCommons_on_success
+            - on_success
+          onFailure:
+            - stepCommons_on_failure
+            - on_failure
+          onComplete:
+            - stepCommons_pre_on_complete
+            - on_complete || echo "[ERROR] on_complete returned an error"
+            - stepCommons_on_complete

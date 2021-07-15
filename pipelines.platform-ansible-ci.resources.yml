@@ -1,0 +1,15 @@
+resources:
+  - name: jfrog_installer_bitbucket_ansible
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      files:
+        include: ^(installers/src/products/ansible)\/.*$
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      buildOn:
+        commit: false
+        pullRequestCreate: false
+      cancelPendingRunsOn:
+        pullRequestUpdate: false

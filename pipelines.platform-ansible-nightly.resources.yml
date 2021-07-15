@@ -1,0 +1,17 @@
+resources:
+  - name: jfrog_installer_bitbucket_ansible_nighty
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      files:
+        include: ^(installers/src/products/ansible)\/.*$
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^master$
+      buildOn:
+        commit: false
+####### set to run at 10 PM UTC, which is around 3:30AM IST        
+  # - name: ansible__nightly_cron
+  #   type: CronTrigger
+  #   configuration:
+  #     interval: '0 22 * * *'   

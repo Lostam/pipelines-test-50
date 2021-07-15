@@ -1,0 +1,52 @@
+pipelines:
+- name: automation_cold_storage
+  configuration:
+    environmentVariables:
+      readOnly:
+        GIT_BRANCH: ""
+        CI: "true"
+  steps:
+  - name: artifactory_cold_storage2_e2e
+    type: Matrix
+    stepMode: Bash
+    configuration:
+      runtime:
+        type: image
+        image:
+          custom:
+            name: docker.jfrog.io/pipelines/pipelines-agent-docker
+            tag: 19.03.8-ce-1
+            options: "-e HOME=/root --privileged"
+            registry: docker_jfrog_io
+            sourceRepository: common-docker-local
+      inputResources:
+        - name: auto_cold_storage_bitbucket
+          trigger: false
+        - name: artifactory_pro_art_jfrog_io_docker_image
+          trigger: false
+        - name: artifactory_release_e2e_trigger_property_bag
+          newVersionOnly: true
+      integrations:
+        - name: entplus_deployer
+        - name: docker_jfrog_io_reader
+        - name: slack_platform_clean_pipeline
+        - name: slack_platform_release_pipeline
+        - name: jfdev_agent
+      environmentVariables:
+        ARTIFACTORY_VERSION: ''
+    stepletMultipliers:
+      environmentVariables:
+        - BINARYSTORE_TYPE: LOCAL
+        - BINARYSTORE_TYPE: GLACIER
+    execution:
+      onExecute:
+        - source ${res_auto_cold_storage_bitbucket_resourcePath}/artifactory/automation/ice-tester/src/build/ci/pipeline_cold_storage.sh
+        - source "${res_auto_cold_storage_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+        - on_execute
+      onComplete:
+        - stepCommons_pre_on_complete
+        - on_complete
+      onSuccess:
+        - stepCommons_on_success
+      onFailure:
+        - stepCommons_on_failure

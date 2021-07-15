@@ -1,0 +1,20 @@
+resources:
+  - name: jfrog_installer_bitbucket_charts
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      files:
+        include: ^(installers/src/products/helm-charts/stable)\/.*$
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+        exclude: ^master$
+      buildOn:
+        commit: true
+        pullRequestCreate: true
+      cancelPendingRunsOn:
+        pullRequestUpdate: true
+  - name: pre_install_property_bag
+    type: PropertyBag
+    configuration:
+      default: -1

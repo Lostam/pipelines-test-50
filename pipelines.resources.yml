@@ -1,0 +1,713 @@
+resources:
+  #GIT RESOURCES
+  - name: artifactory_monorepo_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        exclude:  ^(access-go-client/_cli)\/.*$
+  - name: replicator_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(replicator)\/.*$
+  - name: p2p_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(p2p)\/.*$
+  - name: parent_pom_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(parent-pom)\/.*$
+  - name: artifactory_pro_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(artifactory-pro)\/.*$
+  - name: commons_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(commons(-pro)?)\/.*$
+  - name: artifactory_oss_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(artifactory-oss)\/.*$
+  - name: binary_store_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(binary-store(-pro)?)\/.*$
+  - name: go_base_application_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(go-base-application)\/.*$
+  - name: router_grpc_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(router/grpc-api)\/.*$
+  - name: router_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(router)\/.*$
+  - name: package_indexer_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(package-indexer)\/.*$
+  - name: metadata_java_client_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(metadata-java-client)\/.*$
+  - name: metadata_go_client_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(metadata-go-client)\/.*$
+  - name: metadata_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(metadata)\/.*$
+  - name: nodejs_commons_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(nodejs-commons)\/.*$
+  - name: artifactory_nodejs_client_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(artifactory-nodejs-client)\/.*$
+  - name: metadata_nodejs_client_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(metadata-nodejs-client)\/.*$
+  - name: event_nodejs_client_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(event-nodejs-client)\/.*$
+
+  - name: jfconnect_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(jfconnect/service)\/.*$
+  - name: event_grpc_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(event/grpc-api)\/.*$
+  - name: event_service_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(event/service)\/.*$
+  - name: event_service_e2e_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(event/(service|e2e-tests))\/.*$
+  - name: event_java_client_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(event/client-java)\/.*$
+  - name: tracker_java_client_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^(p2p/tracker-java-client)\/.*$
+  - name: artifactory_ci_scripts_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: (^build\/ci\/scripts\/.*$)|(.*\/?(pom\.xml$|go\.mod$|package\.json$))
+  - name: artifactory_release_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      buildOn:
+        commit: false
+  - name: installers_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^installers\/.*$
+        exclude: ^installers\/src\/products\/(ansible|helm-charts)\/.*$
+  - name: auto_sanity_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^artifactory/automation\/.*$
+  - name: auto_cold_storage_bitbucket
+    type: GitRepo
+    configuration:
+      path: jfrog/artifactory
+      gitProvider: JFrog_bitbucket
+      branches:
+        include: ^{{gitBranch}}$
+      files:
+        include: ^artifactory/automation/ice-tester\/.*$
+
+  # Docker resources
+  - name: artifactory_oss_art_jfrog_io_docker_image
+    type: Image
+    configuration:
+      registry: art_jfrog_io
+      sourceRepository: art-docker-dev-local
+      imageName: jfrog/artifactory-oss
+      imageTag: undefined
+      autoPull: false
+
+  - name: artifactory_pro_art_jfrog_io_docker_image
+    type: Image
+    configuration:
+      registry: art_jfrog_io
+      sourceRepository: art-docker-dev-local
+      imageName: jfrog/artifactory-pro
+      imageTag: undefined
+      autoPull: false
+
+  - name: artifactory_nginx_oss_art_jfrog_io_docker_image
+    type: Image
+    configuration:
+      registry: art_jfrog_io
+      sourceRepository: art-docker-dev-local
+      imageName: jfrog/nginx-artifactory
+      imageTag: undefined
+      autoPull: false
+
+  - name: artifactory_nginx_pro_art_jfrog_io_docker_image
+    type: Image
+    configuration:
+      registry: art_jfrog_io
+      sourceRepository: art-docker-dev-local
+      imageName: jfrog/nginx-artifactory-pro
+      imageTag: undefined
+      autoPull: false
+
+  - name: artifactory_cpp_ce_art_jfrog_io_docker_image
+    type: Image
+    configuration:
+      registry: art_jfrog_io
+      sourceRepository: art-docker-dev-local
+      imageName: jfrog/artifactory-cpp-ce
+      imageTag: undefined
+      autoPull: false
+
+  - name: artifactory_jcr_art_jfrog_io_docker_image
+    type: Image
+    configuration:
+      registry: art_jfrog_io
+      sourceRepository: art-docker-dev-local
+      imageName: jfrog/artifactory-jcr
+      imageTag: undefined
+      autoPull: false
+
+  - name: artifactory_jcr_online_art_jfrog_io_docker_image
+    type: Image
+    configuration:
+      registry: art_jfrog_io
+      sourceRepository: art-docker-dev-local
+      imageName: jfrog/artifactory-jcr-online
+      imageTag: undefined
+      autoPull: false
+
+  - name: artifactory_online_art_jfrog_io_docker_image
+    type: Image
+    configuration:
+      registry: art_jfrog_io
+      sourceRepository: art-docker-dev-local
+      imageName: jfrog/artifactory-online
+      imageTag: undefined
+      autoPull: false
+
+  - name: router_art_jfrog_io_docker_image
+    type: Image
+    configuration:
+      registry: art_jfrog_io
+      sourceRepository: art-docker-dev-local
+      imageName: jfrog/router
+      imageTag: undefined
+      autoPull: false
+
+  - name: jfconnect_art_jfrog_io_docker_image
+    type: Image
+    configuration:
+      registry: art_jfrog_io
+      sourceRepository: art-docker-dev-local
+      imageName: jfrog/jfconnect
+      imageTag: undefined
+      autoPull: false
+
+  - name: p2p_client_art_jfrog_io_docker_image
+    type: Image
+    configuration:
+      registry: art_jfrog_io
+      sourceRepository: art-docker-dev-local
+      imageName: jfrog/p2p/peer
+      imageTag: undefined
+      autoPull: false
+
+  # BUILD-INFO RESOURCES
+  - name: p2p_common_go_module_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: p2p_tracker_go_module_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: p2p_client_go_module_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: p2p_client_bin_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: jfconnect_bin_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: p2p_client_maven_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: p2p_client_archive_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: p2p_client_docker_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: router_go_module_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: replicator_bin_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: replicator_maven_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: router_bin_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: router_maven_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: router_docker_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: jfconnect_docker_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: metadata_go_module_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: jenkins_metadata_bin_build_info
+    type: buildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: event_go_module_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: metadata_maven_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+
+  - name: artifactory_oss_java_module_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: artifactory_pro_java_module_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: artifactory_pro_docker_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: artifactory_oss_docker_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: replicator_go_module_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: artifactory_pro_maven_package_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: artifactory_pro_package_installers_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: artifactory_oss_package_installers_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: artifactory_oss_maven_package_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: go_base_application_go_module_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: router_grpc_go_module_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: metadata_go_client_go_module_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: jfconnect_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: event_grpc_go_module_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: router_grpc_java_module_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: event_service_maven_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: jfconnect_maven_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: parent_pom_java_module_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: commons_java_module_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: commons_pro_java_module_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: binary_store_java_module_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: binary_store_pro_java_module_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: package_indexer_java_module_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: event_java_client_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: tracker_java_client_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: event_grpc_java_module_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: metadata_java_client_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: router_grpc_npm_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: nodejs_commons_npm_module_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: metadata_nodejs_client_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: artifactory_nodejs_client_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: event_nodejs_client_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: installers_java_module_build_info
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: entplus_deployer
+      buildName: undefined
+      buildNumber: -1
+  - name: post_release_step_property_bag
+    type: PropertyBag
+    configuration:
+      default: -1
+  - name: artifactory_monorepo_release_services_properties
+    type: PropertyBag
+    configuration:
+      last_released_run_number: -1
+  - name: post_release_property_bag
+    type: PropertyBag
+    configuration:
+      default: -1
+  - name: artifactory_release_e2e_trigger_property_bag
+    type: PropertyBag
+    configuration:
+      buildNumber: -1
+  - name: artifactory_release_dev_itest_trigger_property_bag
+    type: PropertyBag
+    configuration:
+      buildNumber: -1
+  - name: artifactory_release_dev_db_unittest_trigger_property_bag
+    type: PropertyBag
+    configuration:
+      buildNumber: -1

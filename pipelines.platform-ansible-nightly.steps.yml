@@ -1,0 +1,438 @@
+pipelines:
+  - name: jfrog_platform_ansible_nightly
+    configuration:
+      environmentVariables:
+        readOnly:
+          JSON_CRED: ${int_ansible_terraform_gcp_cred_new_json_cred}
+          SERVER_KEY: ${int_ansible_terraform_gcp_cred_new_server_key}
+          UBUNTU_16: ubuntu16
+          UBUNTU_18: ubuntu18
+          UBUNTU_20: ubuntu20
+          CENTOS_7: centos7
+          CENTOS_8: centos8
+          RHEL_7: rhel7
+          RHEL_8: rhel8
+          DEBIAN_9: debian9
+          DEBIAN_10: debian10
+          ANSIBLE_DOCKER_IMAGE: releases-docker.jfrog.io/ansible-deployer
+          ANSIBLE_DOCKER_IMAGE_TAG: 4.1.0
+          TERRAFORM_DOCKER_IMAGE: releases-docker.jfrog.io/hashicorp/terraform
+          TERRAFORM_DOCKER_IMAGE_TAG: 1.0.0
+
+    steps:
+      - name: start_ansible_setup
+        type: Bash
+        configuration:
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible_nighty
+          integrations:
+            - name: entplus_deployer
+        execution:
+          onExecute:
+            - echo "Starting Ansible deployment"
+            - pushd ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible
+
+      - name: terraform_setup_ubuntu_env_16
+        type: Bash
+        configuration:
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible_nighty
+          integrations:
+            - name: entplus_deployer
+            - name: ansible_terraform_gcp_cred_new
+          inputSteps:
+            - name: start_ansible_setup
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform/gcp
+          onExecute:
+            - ls -ltr
+            - mkdir -p ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform-startup.sh "${UBUNTU_16}"
+            - mv ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_ubuntu* ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_ubuntu
+            - add_run_files ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_ubuntu ubuntu_env_16_inventory
+            - add_run_files ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform/gcp terraform_ubuntu_env_16
+
+      - name: terraform_setup_ubuntu_env_18
+        type: Bash
+        configuration:
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible_nighty
+          integrations:
+            - name: entplus_deployer
+            - name: ansible_terraform_gcp_cred_new
+          inputSteps:
+            - name: start_ansible_setup
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform/gcp
+          onExecute:
+            - ls -ltr
+            - mkdir -p ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform-startup.sh "${UBUNTU_18}"
+            - mv ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_ubuntu* ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_ubuntu
+            - add_run_files ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_ubuntu ubuntu_env_18_inventory
+            - add_run_files ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform/gcp terraform_ubuntu_env_18
+
+      - name: terraform_setup_ubuntu_env_20
+        type: Bash
+        configuration:
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible_nighty
+          integrations:
+            - name: entplus_deployer
+            - name: ansible_terraform_gcp_cred_new
+          inputSteps:
+            - name: start_ansible_setup
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform/gcp
+          onExecute:
+            - ls -ltr
+            - mkdir -p ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform-startup.sh "${UBUNTU_20}"
+            - mv ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_ubuntu* ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_ubuntu
+            - add_run_files ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_ubuntu ubuntu_env_20_inventory
+            - add_run_files ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform/gcp terraform_ubuntu_env_20
+
+      - name: terraform_setup_centos_env_7
+        type: Bash
+        configuration:
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible_nighty
+          integrations:
+            - name: entplus_deployer
+            - name: ansible_terraform_gcp_cred_new
+          inputSteps:
+            - name: start_ansible_setup
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform/gcp
+          onExecute:
+            - ls -ltr
+            - mkdir -p ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform-startup.sh "${CENTOS_7}"
+            - mv ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_centos* ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_centos
+            - add_run_files ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_centos centos_env_7_inventory
+            - add_run_files ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform/gcp terraform_centos_env_7
+          
+      - name: terraform_setup_centos_env_8
+        type: Bash
+        configuration:
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible_nighty
+          integrations:
+            - name: entplus_deployer
+            - name: ansible_terraform_gcp_cred_new
+          inputSteps:
+            - name: start_ansible_setup
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform/gcp
+          onExecute:
+            - ls -ltr
+            - mkdir -p ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform-startup.sh "${CENTOS_8}"
+            - mv ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_centos* ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_centos
+            - add_run_files ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_centos centos_env_8_inventory
+            - add_run_files ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform/gcp terraform_centos_env_8
+
+      - name: terraform_setup_rhel_env_7
+        type: Bash
+        configuration:
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible_nighty
+          integrations:
+            - name: entplus_deployer
+            - name: ansible_terraform_gcp_cred_new
+          inputSteps:
+            - name: start_ansible_setup
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform/gcp
+          onExecute:
+            - ls -ltr
+            - mkdir -p ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform-startup.sh "${RHEL_7}"
+            - mv ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_rhel* ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_rhel
+            - add_run_files ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_rhel rhel_env_7_inventory
+            - add_run_files ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform/gcp terraform_rhel_env_7
+          
+      - name: terraform_setup_rhel_env_8
+        type: Bash
+        configuration:
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible_nighty
+          integrations:
+            - name: entplus_deployer
+            - name: ansible_terraform_gcp_cred_new
+          inputSteps:
+            - name: start_ansible_setup
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform/gcp
+          onExecute:
+            - ls -ltr
+            - mkdir -p ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform-startup.sh "${RHEL_8}"
+            - mv ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_rhel* ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_rhel
+            - add_run_files ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_rhel rhel_env_8_inventory
+            - add_run_files ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform/gcp terraform_rhel_env_8
+
+      - name: terraform_setup_debian_env_9
+        type: Bash
+        configuration:
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible_nighty
+          integrations:
+            - name: entplus_deployer
+            - name: ansible_terraform_gcp_cred_new
+          inputSteps:
+            - name: start_ansible_setup
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform/gcp
+          onExecute:
+            - ls -ltr
+            - mkdir -p ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform-startup.sh "${DEBIAN_9}"
+            - mv ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_debian* ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_debian
+            - add_run_files ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_debian debian_env_9_inventory
+            - add_run_files ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform/gcp terraform_debian_env_9
+
+      - name: terraform_setup_debian_env_10
+        type: Bash
+        configuration:
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible_nighty
+          integrations:
+            - name: entplus_deployer
+            - name: ansible_terraform_gcp_cred_new
+          inputSteps:
+            - name: start_ansible_setup
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform/gcp
+          onExecute:
+            - ls -ltr
+            - mkdir -p ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform-startup.sh "${DEBIAN_10}"
+            - mv ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_debian* ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_debian
+            - add_run_files ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_debian debian_env_10_inventory
+            - add_run_files ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform/gcp terraform_debian_env_10
+
+      - name: ansible_install_ubuntu_env_16
+        type: Bash
+        configuration:
+          timeoutSeconds: 3600
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible_nighty
+          integrations:
+            - name: entplus_deployer
+            - name: ansible_terraform_gcp_cred_new
+          inputSteps:
+            - name: terraform_setup_ubuntu_env_16
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/ansible_collections/jfrog/platform
+            - rm -rf hosts.ini || true
+            - restore_run_files ubuntu_env_16_inventory hosts.ini
+          onExecute:
+            - cat hosts.ini
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible-startup.sh
+          onComplete:
+            - restore_run_files terraform_ubuntu_env_16 terraform_ubuntu
+            - pushd terraform_ubuntu
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform-destroy.sh "${UBUNTU_16}"
+
+      - name: ansible_install_ubuntu_env_18
+        type: Bash
+        configuration:
+          timeoutSeconds: 3600
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible_nighty
+          integrations:
+            - name: entplus_deployer
+            - name: ansible_terraform_gcp_cred_new
+          inputSteps:
+            - name: terraform_setup_ubuntu_env_18
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/ansible_collections/jfrog/platform
+            - rm -rf hosts.ini || true
+            - restore_run_files ubuntu_env_18_inventory hosts.ini
+          onExecute:
+            - cat hosts.ini
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible-startup.sh
+          onComplete:
+            - restore_run_files terraform_ubuntu_env_18 terraform_ubuntu
+            - pushd terraform_ubuntu
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform-destroy.sh "${UBUNTU_18}"
+
+      - name: ansible_install_ubuntu_env_20
+        type: Bash
+        configuration:
+          timeoutSeconds: 3600
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible_nighty
+          integrations:
+            - name: entplus_deployer
+            - name: ansible_terraform_gcp_cred_new
+          inputSteps:
+            - name: terraform_setup_ubuntu_env_20
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/ansible_collections/jfrog/platform
+            - rm -rf hosts.ini || true
+            - restore_run_files ubuntu_env_20_inventory hosts.ini
+          onExecute:
+            - cat hosts.ini
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible-startup.sh
+          onComplete:
+            - restore_run_files terraform_ubuntu_env_20 terraform_ubuntu
+            - pushd terraform_ubuntu
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform-destroy.sh "${UBUNTU_20}"
+            
+      - name: ansible_install_centos_env_7
+        type: Bash
+        configuration:
+          timeoutSeconds: 3600
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible_nighty
+          integrations:
+            - name: entplus_deployer
+            - name: ansible_terraform_gcp_cred_new
+          inputSteps:
+            - name: terraform_setup_centos_env_7
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/ansible_collections/jfrog/platform
+            - rm -rf hosts.ini || true
+            - restore_run_files centos_env_7_inventory hosts.ini
+          onExecute:
+            - cat hosts.ini
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible-startup.sh "${CENTOS_7}"
+          onComplete:
+            - restore_run_files terraform_centos_env_7 terraform_centos
+            - pushd terraform_centos
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform-destroy.sh "${CENTOS_7}"
+
+      - name: ansible_install_centos_env_8
+        type: Bash
+        configuration:
+          timeoutSeconds: 3600
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible_nighty
+          integrations:
+            - name: entplus_deployer
+            - name: ansible_terraform_gcp_cred_new
+          inputSteps:
+            - name: terraform_setup_centos_env_8
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/ansible_collections/jfrog/platform
+            - rm -rf hosts.ini || true
+            - restore_run_files centos_env_8_inventory hosts.ini
+          onExecute:
+            - cat hosts.ini
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible-startup.sh
+          onComplete:
+            - restore_run_files terraform_centos_env_8 terraform_centos
+            - pushd terraform_centos
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform-destroy.sh "${CENTOS_8}"
+
+      - name: ansible_install_rhel_env_7
+        type: Bash
+        configuration:
+          timeoutSeconds: 3600
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible_nighty
+          integrations:
+            - name: entplus_deployer
+            - name: ansible_terraform_gcp_cred_new
+          inputSteps:
+            - name: terraform_setup_rhel_env_7
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/ansible_collections/jfrog/platform
+            - rm -rf hosts.ini || true
+            - restore_run_files rhel_env_7_inventory hosts.ini
+          onExecute:
+            - cat hosts.ini
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible-startup.sh "${RHEL_7}"
+          onComplete:
+            - restore_run_files terraform_rhel_env_7 terraform_rhel
+            - pushd terraform_rhel
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform-destroy.sh "${RHEL_7}"
+
+      - name: ansible_install_rhel_env_8
+        type: Bash
+        configuration:
+          timeoutSeconds: 3600
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible_nighty
+          integrations:
+            - name: entplus_deployer
+            - name: ansible_terraform_gcp_cred_new
+          inputSteps:
+            - name: terraform_setup_rhel_env_8
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/ansible_collections/jfrog/platform
+            - rm -rf hosts.ini || true
+            - restore_run_files rhel_env_8_inventory hosts.ini
+          onExecute:
+            - cat hosts.ini
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible-startup.sh
+          onComplete:
+            - restore_run_files terraform_rhel_env_8 terraform_rhel
+            - pushd terraform_rhel
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform-destroy.sh "${RHEL_8}"
+
+      - name: ansible_install_debian_env_9
+        type: Bash
+        configuration:
+          timeoutSeconds: 3600
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible_nighty
+          integrations:
+            - name: entplus_deployer
+            - name: ansible_terraform_gcp_cred_new
+          inputSteps:
+            - name: terraform_setup_debian_env_9
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/ansible_collections/jfrog/platform
+            - rm -rf hosts.ini || true
+            - restore_run_files debian_env_9_inventory hosts.ini
+          onExecute:
+            - cat hosts.ini
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible-startup.sh
+          onComplete:
+            - restore_run_files terraform_debian_env_9 terraform_debian
+            - pushd terraform_debian
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform-destroy.sh "${DEBIAN_9}"
+
+      - name: ansible_install_debian_env_10
+        type: Bash
+        configuration:
+          timeoutSeconds: 3600
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible_nighty
+          integrations:
+            - name: entplus_deployer
+            - name: ansible_terraform_gcp_cred_new
+          inputSteps:
+            - name: terraform_setup_debian_env_10
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/ansible_collections/jfrog/platform
+            - rm -rf hosts.ini || true
+            - restore_run_files debian_env_10_inventory hosts.ini
+          onExecute:
+            - cat hosts.ini
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/ansible-startup.sh
+          onComplete:
+            - restore_run_files terraform_debian_env_10 terraform_debian
+            - pushd terraform_debian
+            - ${res_jfrog_installer_bitbucket_ansible_nighty_resourcePath}/installers/src/products/ansible/test/terraform-destroy.sh "${DEBIAN_10}"

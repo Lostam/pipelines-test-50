@@ -1,0 +1,132 @@
+pipelines:
+  - name: jfrog_platform_ansible_pr_build
+    configuration:
+      environmentVariables:
+        readOnly:
+          JSON_CRED: ${int_ansible_terraform_gcp_cred_new_json_cred}
+          SERVER_KEY: ${int_ansible_terraform_gcp_cred_new_server_key}
+          UBUNTU_FLAVOUR: ubuntu18
+          CENTOS_FLAVOUR: centos7
+          ANSIBLE_DOCKER_IMAGE: releases-docker.jfrog.io/ansible-deployer
+          ANSIBLE_DOCKER_IMAGE_TAG: 4.1.0
+          TERRAFORM_DOCKER_IMAGE: releases-docker.jfrog.io/hashicorp/terraform
+          TERRAFORM_DOCKER_IMAGE_TAG: 1.0.0
+
+    steps:
+      - name: start_ansible_setup
+        type: Bash
+        configuration:
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible
+          integrations:
+            - name: entplus_deployer
+        execution:
+          onExecute:
+            - echo "Starting Ansible deployment"
+            - pushd ${res_jfrog_installer_bitbucket_ansible_resourcePath}/installers/src/products/ansible
+
+      - name: terraform_setup_ubuntu_18
+        type: Bash
+        configuration:
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible
+          integrations:
+            - name: entplus_deployer
+            - name: ansible_terraform_gcp_cred_new
+          inputSteps:
+            - name: start_ansible_setup
+          affinityGroup: ubuntuenv
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_ansible_resourcePath}/installers/src/products/ansible/test/terraform/gcp
+          onExecute:
+            - ls -ltr
+            - mkdir -p ${res_jfrog_installer_bitbucket_ansible_resourcePath}/installers/src/products/ansible/test/ansible/inventory
+            - ${res_jfrog_installer_bitbucket_ansible_resourcePath}/installers/src/products/ansible/test/terraform-startup.sh "${UBUNTU_FLAVOUR}"
+            - mv ${res_jfrog_installer_bitbucket_ansible_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_ubuntu* ${res_jfrog_installer_bitbucket_ansible_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_ubuntu
+            - add_run_files ${res_jfrog_installer_bitbucket_ansible_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_ubuntu ubuntu_inventory
+            - add_run_files ${res_jfrog_installer_bitbucket_ansible_resourcePath}/installers/src/products/ansible/test/terraform/gcp terraform_ubuntu_env
+          # onSuccess:
+          #   - 'update_commit_status jfrog_installer_bitbucket_ansible --message "[Step 1] Terraform ${UBUNTU_FLAVOUR} Setup : Successfully Completed"'
+          # onFailure:
+          #   - 'update_commit_status jfrog_installer_bitbucket_ansible --message "[Step 1] Terraform ${UBUNTU_FLAVOUR} Setup : Failed"'
+
+      - name: terraform_setup_centos_7
+        type: Bash
+        configuration:
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible
+          integrations:
+            - name: entplus_deployer
+            - name: ansible_terraform_gcp_cred_new
+          inputSteps:
+            - name: start_ansible_setup
+          affinityGroup: centosenv
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_ansible_resourcePath}/installers/src/products/ansible/test/terraform/gcp
+          onExecute:
+            - ls -ltr
+            - mkdir -p ${res_jfrog_installer_bitbucket_ansible_resourcePath}/installers/src/products/ansible/test/ansible/inventory
+            - ${res_jfrog_installer_bitbucket_ansible_resourcePath}/installers/src/products/ansible/test/terraform-startup.sh "${CENTOS_FLAVOUR}"
+            - mv ${res_jfrog_installer_bitbucket_ansible_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_centos* ${res_jfrog_installer_bitbucket_ansible_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_centos
+            - add_run_files ${res_jfrog_installer_bitbucket_ansible_resourcePath}/installers/src/products/ansible/test/ansible/inventory/hosts.ini_centos centos_inventory
+            - add_run_files ${res_jfrog_installer_bitbucket_ansible_resourcePath}/installers/src/products/ansible/test/terraform/gcp terraform_centos_env
+          # onSuccess:
+            # - 'update_commit_status jfrog_installer_bitbucket_ansible --message "[Step 2] Terraform ${CENTOS_FLAVOUR} Setup : Successfully Completed"'
+          # onFailure:
+            # - 'update_commit_status jfrog_installer_bitbucket_ansible --message "[Step 2] Terraform ${CENTOS_FLAVOUR} Setup : Failed"'
+
+      - name: ansible_install_ubuntu_18
+        type: Bash
+        configuration:
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible
+          integrations:
+            - name: entplus_deployer
+            - name: ansible_terraform_gcp_cred_new
+          inputSteps:
+            - name: terraform_setup_ubuntu_18
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_ansible_resourcePath}/installers/src/products/ansible/ansible_collections/jfrog/platform
+            - rm -rf hosts.ini || true
+            - restore_run_files ubuntu_inventory hosts.ini
+          onExecute:
+            - cat hosts.ini
+            - ${res_jfrog_installer_bitbucket_ansible_resourcePath}/installers/src/products/ansible/test/ansible-startup.sh
+          # onSuccess:
+            # - 'update_commit_status jfrog_installer_bitbucket_ansible --message "[Step 3] Ansible ${UBUNTU_FLAVOUR} Setup : Successfully Completed"'
+          # onFailure:
+            # - 'update_commit_status jfrog_installer_bitbucket_ansible --message "[Step 3] Ansible ${UBUNTU_FLAVOUR} Setup : Failed"'
+          onComplete:
+            - restore_run_files terraform_ubuntu_env terraform_ubuntu
+            - pushd terraform_ubuntu
+            - ${res_jfrog_installer_bitbucket_ansible_resourcePath}/installers/src/products/ansible/test/terraform-destroy.sh "${UBUNTU_FLAVOUR}"
+            
+      - name: ansible_install_centos_7
+        type: Bash
+        configuration:
+          inputResources:
+            - name: jfrog_installer_bitbucket_ansible
+          integrations:
+            - name: entplus_deployer
+            - name: ansible_terraform_gcp_cred_new
+          inputSteps:
+            - name: terraform_setup_centos_7
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_ansible_resourcePath}/installers/src/products/ansible/ansible_collections/jfrog/platform
+            - rm -rf hosts.ini || true
+            - restore_run_files centos_inventory hosts.ini
+          onExecute:
+            - cat hosts.ini
+            - ${res_jfrog_installer_bitbucket_ansible_resourcePath}/installers/src/products/ansible/test/ansible-startup.sh ${CENTOS_FLAVOUR}
+          # onSuccess:
+            # - 'update_commit_status jfrog_installer_bitbucket_ansible --message "[Step 3] Ansible ${CENTOS_FLAVOUR} Setup : Successfully Completed"'
+          # onFailure:
+            # - 'update_commit_status jfrog_installer_bitbucket_ansible --message "[Step 3] Ansible ${CENTOS_FLAVOUR} Setup : Failed"'
+          onComplete:
+            - restore_run_files terraform_centos_env terraform_centos
+            - pushd terraform_centos
+            - ${res_jfrog_installer_bitbucket_ansible_resourcePath}/installers/src/products/ansible/test/terraform-destroy.sh "${CENTOS_FLAVOUR}"

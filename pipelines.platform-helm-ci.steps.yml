@@ -1,0 +1,687 @@
+pipelines:
+  - name: jfrog_platform_helm_pr_run
+    configuration:
+      environmentVariables:
+        readOnly:
+          GCLOUD_GKE_CLUSTER: ${int_charts_testing_cluster_cluster}
+          GCLOUD_SERVICE_KEY_CHARTS_CI: ${int_charts_testing_cluster_gcp_service_key}
+          AWS_ACCESS_KEY_ID: ${int_charts_testing_cluster_v16_accessKeyId}
+          AWS_SECRET_ACCESS_KEY: ${int_charts_testing_cluster_v16_secretAccessKey}
+          EKS_KUBECONFIG: ${int_charts_testing_cluster_eks_v16_config}
+          REPO_ROOT: ${res_jfrog_installer_bitbucket_charts_resourcePath}
+          HELM_VERSION: v3.6.0
+          KUBEVAL_VERSION: v0.16.1
+          DOCKERREPO: docker.jfrog.io
+          CHART_TESTING_IMAGE: releases-docker.jfrog.io/charts-ci
+          CHART_TESTING_TAG: v0.0.26
+          DEFAULT_EXTRA_PARAMS: "conf_artifactory_unified_version=latestOfficialRelease\nconf_xray_unified_version=latestOfficialRelease\nconf_jfmc_unified_version=latestOfficialRelease\nconf_distribution_unified_version=latestOfficialRelease\nconf_pipelines_unified_version=latestOfficialRelease"
+
+    steps:
+      - name: a_lint_helm_scripts
+        type: Bash
+        configuration:
+          inputResources:
+            - name: jfrog_installer_bitbucket_charts
+          integrations:
+            - name: entplus_deployer
+        execution:
+          onStart:
+            - echo "Lint scripts"
+            - pushd ${res_jfrog_installer_bitbucket_charts_resourcePath}/installers/src/products/helm-charts
+            - git checkout ${res_jfrog_installer_bitbucket_charts_branchName}
+          onExecute:
+            - source test/custom.sh
+            - echo "Run shell scripts linting!"
+            - mkdir -p tmp
+            - test/lint-scripts.sh 2>&1 | tee tmp/lint-scripts.log
+          onSuccess:
+            - 'update_commit_status jfrog_installer_bitbucket_charts --message "[Step 1] Lint Helm Scripts : Successfully Completed"'
+          onFailure:
+            - 'update_commit_status jfrog_installer_bitbucket_charts --message "[Step 1] Lint Helm Scripts : Failed"'
+
+      - name: b_lint_helm_charts
+        type: Bash
+        configuration:
+          environmentVariables:
+            STEP_STATUS_MESSAGE: "'Charts linting successful.'"
+          inputResources:
+            - name: jfrog_installer_bitbucket_charts
+          inputSteps:
+            - name: a_lint_helm_scripts
+          integrations:
+            - name: entplus_deployer
+        execution:
+          onStart:
+            - echo "Lint charts"
+            - pushd ${res_jfrog_installer_bitbucket_charts_resourcePath}
+            - git checkout ${res_jfrog_installer_bitbucket_charts_branchName} 
+          onExecute:
+            - source installers/src/products/helm-charts/test/custom.sh
+            - echo "Run charts linting!"
+            - installers/src/products/helm-charts/test/lint-charts-common.sh || echo "Failed!"
+            - |
+              if cat tmp/lint.log | grep -e "Error linting charts" -e "No CHANGELOG entry for chart" -e "ERR" > /dev/null; then
+                  echo "Charts linting failed!"
+                  exit 1
+              fi
+            - |
+              if cat tmp/lint.log | grep "No chart changes detected" > /dev/null; then
+                echo "No chart changes detected!"
+                export STEP_STATUS_MESSAGE="Charts linting is not needed."
+                add_run_variables do_not_install=true
+              fi
+          onSuccess:
+            - 'update_commit_status jfrog_installer_bitbucket_charts --message "[Step 2] Lint Helm Charts : Successfully Completed"'
+          onFailure:
+            - 'update_commit_status jfrog_installer_bitbucket_charts --message "[Step 2] Lint Helm Charts : Failed"'
+
+      - name: package_helm_charts
+        type: Bash
+        configuration:
+          inputResources:
+            - name: jfrog_installer_bitbucket_charts
+          inputSteps:
+            - name: b_lint_helm_charts
+          integrations:
+            - name: helm_saas_dev_repo
+            - name: chartstesting_pipeline_internal_slack
+            - name: entplus_deployer
+          environmentVariables:
+            ARTIFACTORY_URL: ${int_helm_saas_dev_repo_ARTIFACTORY_URL}
+            ARTIFACTORY_USER: ${int_helm_saas_dev_repo_ARTIFACTORY_USER}
+            ARTIFACTORY_PASSWORD: ${int_helm_saas_dev_repo_ARTIFACTORY_PASSWORD}
+            ARTIFACTORY_HELM_REPO: helm-local
+        execution:
+          onStart:
+            - echo "Package and upload charts to helm dev repo!"
+            - pushd ${res_jfrog_installer_bitbucket_charts_resourcePath}
+            - git checkout ${res_jfrog_installer_bitbucket_charts_branchName}
+          onExecute:
+            - installers/src/products/helm-charts/test/package-charts-common.sh 
+          onSuccess:
+            - 'update_commit_status jfrog_installer_bitbucket_charts --message "[Step 3] Package Helm Charts : Successfully Completed"'
+          onFailure:
+            - 'update_commit_status jfrog_installer_bitbucket_charts --message "[Step 3] Package Helm Charts : Failed"'
+
+      - name: c_install_helm_charts_artifactory
+        type: Bash
+        configuration:
+          timeoutSeconds: 18000
+          environmentVariables:
+            STEP_STATUS_MESSAGE: "'Charts install successful.'"
+            CHART_TESTING_ARGS: "--charts=installers/src/products/helm-charts/stable/artifactory"
+          inputResources:
+            - name: jfrog_installer_bitbucket_charts
+          integrations:
+            - name: charts_testing_cluster
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: charts_testing_cluster_v16
+            - name: charts_testing_cluster_eks_v16
+          inputSteps:
+            - name: package_helm_charts
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_charts_resourcePath}
+            - git checkout ${res_jfrog_installer_bitbucket_charts_branchName}
+            - |
+              if [[ "${do_not_install}" == "true" ]] || [[ "${artifactory}" != "true" ]]; then
+                mkdir tmp
+                echo "No chart changes detected." > tmp/install.log
+                export STEP_STATUS_MESSAGE="Charts install is not needed."
+                exit 0
+              fi
+          onExecute:
+            - echo "Run charts install!"
+            - installers/src/products/helm-charts/test/e2e-eks-common.sh
+            - |
+              if cat tmp/install.log | grep "Error installing charts" > /dev/null; then
+                  echo "Charts install failed!"
+                  exit 1
+              fi
+          onSuccess:
+            - |
+              if [[ "${do_not_install}" == "true" ]] || [[ "${artifactory}" != "true" ]]; then        
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 4] CT Install Helm Charts Artifactory : Skipped installation"
+              else
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 4] CT Install Helm Charts Artifactory : Successfully Completed"
+              fi
+          onFailure:
+            - 'update_commit_status jfrog_installer_bitbucket_charts --message "[Step 4] CT Install Helm Charts Artifactory : Failed"'
+
+      - name: c_install_helm_charts_artifactory_ha
+        type: Bash
+        configuration:
+          timeoutSeconds: 18000
+          environmentVariables:
+            STEP_STATUS_MESSAGE: "'Charts install successful.'"
+            CHART_TESTING_ARGS: "--charts=installers/src/products/helm-charts/stable/artifactory-ha"
+          inputResources:
+            - name: jfrog_installer_bitbucket_charts
+          integrations:
+            - name: charts_testing_cluster
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: charts_testing_cluster_v16
+            - name: charts_testing_cluster_eks_v16
+          inputSteps:
+            - name: package_helm_charts
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_charts_resourcePath}
+            - git checkout ${res_jfrog_installer_bitbucket_charts_branchName}
+            - |
+              if [[ "${do_not_install}" == "true" ]] || [[ "${artifactory_ha}" != "true" ]]; then
+                mkdir tmp
+                echo "No chart changes detected." > tmp/install.log
+                export STEP_STATUS_MESSAGE="Charts install is not needed."
+                exit 0
+              fi
+          onExecute:
+            - echo "Run charts install!"
+            - installers/src/products/helm-charts/test/e2e-eks-common.sh
+            - |
+              if cat tmp/install.log | grep "Error installing charts" > /dev/null; then
+                  echo "Charts install failed!"
+                  exit 1
+              fi
+          onSuccess:
+            - |
+              if [[ "${do_not_install}" == "true" ]] || [[ "${artifactory_ha}" != "true" ]]; then        
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 5] CT Install Helm Charts Artifactory-HA : Skipped installation"
+              else
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 5] CT Install Helm Charts Artifactory-HA : Successfully Completed"
+              fi
+          onFailure:
+            - 'update_commit_status jfrog_installer_bitbucket_charts --message "[Step 5] CT Install Helm Charts Artifactory-HA : Failed"'
+
+      - name: c_install_helm_charts_artifactory_oss
+        type: Bash
+        configuration:
+          timeoutSeconds: 9000
+          environmentVariables:
+            STEP_STATUS_MESSAGE: "'Charts install successful.'"
+            CHART_TESTING_ARGS: "--charts=installers/src/products/helm-charts/stable/artifactory-oss"
+          inputResources:
+            - name: jfrog_installer_bitbucket_charts
+          integrations:
+            - name: charts_testing_cluster
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: charts_testing_cluster_v16
+            - name: charts_testing_cluster_eks_v16
+          inputSteps:
+            - name: package_helm_charts
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_charts_resourcePath}
+            - git checkout ${res_jfrog_installer_bitbucket_charts_branchName}
+            - |
+              if [[ "${do_not_install}" == "true" ]] || [[ "${artifactory_oss}" != "true" ]]; then
+                mkdir tmp
+                echo "No chart changes detected." > tmp/install.log
+                export STEP_STATUS_MESSAGE="Charts install is not needed."
+                exit 0
+              fi
+          onExecute:
+            - echo "Run charts install!"
+            - installers/src/products/helm-charts/test/e2e-eks-common.sh
+            - |
+              if cat tmp/install.log | grep "Error installing charts" > /dev/null; then
+                  echo "Charts install failed!"
+                  exit 1
+              fi
+          onSuccess:
+            - |
+              if [[ "${do_not_install}" == "true" ]] || [[ "${artifactory_oss}" != "true" ]]; then        
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 6] CT Install Helm Charts Artifactory-OSS : Skipped installation"
+              else
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 6] CT Install Helm Charts Artifactory-OSS : Successfully Completed"
+              fi
+          onFailure:
+            - 'update_commit_status jfrog_installer_bitbucket_charts --message "[Step 6] CT Install Helm Charts Artifactory-OSS : Failed"'
+
+      - name: c_install_helm_charts_artifactory_jcr
+        type: Bash
+        configuration:
+          timeoutSeconds: 9000
+          environmentVariables:
+            STEP_STATUS_MESSAGE: "'Charts install successful.'"
+            CHART_TESTING_ARGS: "--charts=installers/src/products/helm-charts/stable/artifactory-jcr"
+          inputResources:
+            - name: jfrog_installer_bitbucket_charts
+          integrations:
+            - name: charts_testing_cluster
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: charts_testing_cluster_v16
+            - name: charts_testing_cluster_eks_v16
+          inputSteps:
+            - name: package_helm_charts
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_charts_resourcePath}
+            - git checkout ${res_jfrog_installer_bitbucket_charts_branchName}
+            - |
+              if [[ "${do_not_install}" == "true" ]] || [[ "${artifactory_jcr}" != "true" ]]; then
+                mkdir tmp
+                echo "No chart changes detected." > tmp/install.log
+                export STEP_STATUS_MESSAGE="Charts install is not needed."
+                exit 0
+              fi
+          onExecute:
+            - echo "Run charts install!"
+            - installers/src/products/helm-charts/test/e2e-eks-common.sh
+            - |
+              if cat tmp/install.log | grep "Error installing charts" > /dev/null; then
+                  echo "Charts install failed!"
+                  exit 1
+              fi
+          onSuccess:
+            - |
+              if [[ "${do_not_install}" == "true" ]] || [[ "${artifactory_jcr}" != "true" ]]; then        
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 7] CT Install Helm Charts Artifactory-JCR : Skipped installation"
+              else
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 7] CT Install Helm Charts Artifactory-JCR : Successfully Completed"
+              fi
+          onFailure:
+            - 'update_commit_status jfrog_installer_bitbucket_charts --message "[Step 7] CT Install Helm Charts Artifactory-JCR : Failed"'
+
+      - name: c_install_helm_charts_artifactory_cpp_ce
+        type: Bash
+        configuration:
+          timeoutSeconds: 9000
+          environmentVariables:
+            STEP_STATUS_MESSAGE: "'Charts install successful.'"
+            CHART_TESTING_ARGS: "--charts=installers/src/products/helm-charts/stable/artifactory-cpp-ce"
+          inputResources:
+            - name: jfrog_installer_bitbucket_charts
+          integrations:
+            - name: charts_testing_cluster
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: charts_testing_cluster_v16
+            - name: charts_testing_cluster_eks_v16
+          inputSteps:
+            - name: package_helm_charts
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_charts_resourcePath}
+            - git checkout ${res_jfrog_installer_bitbucket_charts_branchName}
+            - |
+              if [[ "${do_not_install}" == "true" ]] || [[ "${artifactory_cpp_ce}" != "true" ]]; then
+                mkdir tmp
+                echo "No chart changes detected." > tmp/install.log
+                export STEP_STATUS_MESSAGE="Charts install is not needed."
+                exit 0
+              fi
+          onExecute:
+            - echo "Run charts install!"
+            - installers/src/products/helm-charts/test/e2e-eks-common.sh
+            - |
+              if cat tmp/install.log | grep "Error installing charts" > /dev/null; then
+                  echo "Charts install failed!"
+                  exit 1
+              fi
+          onSuccess:
+            - |
+              if [[ "${do_not_install}" == "true" ]] || [[ "${artifactory_cpp_ce}" != "true" ]]; then        
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 8] CT Install Helm Charts Artifactory-CPP-CE : Skipped installation"
+              else
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 8] CT Install Helm Charts Artifactory-CPP-CE : Successfully Completed"
+              fi
+          onFailure:
+            - 'update_commit_status jfrog_installer_bitbucket_charts --message "[Step 8] CT Install Helm Charts Artifactory-CPP-CE : Failed"'
+
+      - name: c_install_helm_charts_distribution
+        type: Bash
+        configuration:
+          timeoutSeconds: 9000
+          environmentVariables:
+            STEP_STATUS_MESSAGE: "'Charts install successful.'"
+            CHART_TESTING_ARGS: "--charts=installers/src/products/helm-charts/stable/distribution"
+          inputResources:
+            - name: jfrog_installer_bitbucket_charts
+          integrations:
+            - name: charts_testing_cluster
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: charts_testing_cluster_v16
+            - name: charts_testing_cluster_eks_v16
+          inputSteps:
+            - name: package_helm_charts
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_charts_resourcePath}
+            - git checkout ${res_jfrog_installer_bitbucket_charts_branchName}
+            - |
+              if [[ "${do_not_install}" == "true" ]] || [[ "${distribution}" != "true" ]]; then
+                mkdir tmp
+                echo "No chart changes detected." > tmp/install.log
+                export STEP_STATUS_MESSAGE="Charts install is not needed."
+                exit 0
+              fi
+          onExecute:
+            - echo "Run charts install!"
+            - installers/src/products/helm-charts/test/e2e-eks-common.sh
+            - |
+              if cat tmp/install.log | grep "Error installing charts" > /dev/null; then
+                  echo "Charts install failed!"
+                  exit 1
+              fi
+          onSuccess:
+            - |
+              if [[ "${do_not_install}" == "true" ]] || [[ "${distribution}" != "true" ]]; then        
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 9] CT Install Helm Charts Distribution : Skipped installation"
+              else
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 9] CT Install Helm Charts Distribution : Successfully Completed"
+              fi
+          onFailure:
+            - 'update_commit_status jfrog_installer_bitbucket_charts --message "[Step 9] CT Install Helm Charts Distribution : Failed"'
+
+      - name: c_install_helm_charts_mission_control
+        type: Bash
+        configuration:
+          timeoutSeconds: 9000
+          environmentVariables:
+            STEP_STATUS_MESSAGE: "'Charts install successful.'"
+            CHART_TESTING_ARGS: "--charts=installers/src/products/helm-charts/stable/mission-control"
+          inputResources:
+            - name: jfrog_installer_bitbucket_charts
+          integrations:
+            - name: charts_testing_cluster
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: charts_testing_cluster_v16
+            - name: charts_testing_cluster_eks_v16
+          inputSteps:
+            - name: package_helm_charts
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_charts_resourcePath}
+            - git checkout ${res_jfrog_installer_bitbucket_charts_branchName}
+            - |
+              if [[ "${do_not_install}" == "true" ]] || [[ "${mission_control}" != "true" ]]; then
+                mkdir tmp
+                echo "No chart changes detected." > tmp/install.log
+                export STEP_STATUS_MESSAGE="Charts install is not needed."
+                exit 0
+              fi
+          onExecute:
+            - echo "Run charts install!"
+            - installers/src/products/helm-charts/test/e2e-eks-common.sh
+            - |
+              if cat tmp/install.log | grep "Error installing charts" > /dev/null; then
+                  echo "Charts install failed!"
+                  exit 1
+              fi
+          onSuccess:
+            - |
+              if [[ "${do_not_install}" == "true" ]] || [[ "${mission_control}" != "true" ]]; then        
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 10] CT Install Helm Charts mission-control : Skipped installation"
+              else
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 10] CT Install Helm Charts mission-control : Successfully Completed"
+              fi
+          onFailure:
+            - 'update_commit_status jfrog_installer_bitbucket_charts --message "[Step 10] CT Install Helm Charts mission-control : Failed"'
+      
+      - name: c_install_helm_charts_insight
+        type: Bash
+        configuration:
+          timeoutSeconds: 9000
+          environmentVariables:
+            STEP_STATUS_MESSAGE: "'Charts install successful.'"
+            CHART_TESTING_ARGS: "--charts=installers/src/products/helm-charts/stable/insight"
+          inputResources:
+            - name: jfrog_installer_bitbucket_charts
+          integrations:
+            - name: charts_testing_cluster
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: charts_testing_cluster_v16
+            - name: charts_testing_cluster_eks_v16
+          inputSteps:
+            - name: package_helm_charts
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_charts_resourcePath}
+            - git checkout ${res_jfrog_installer_bitbucket_charts_branchName}
+            - |
+              if [[ "${do_not_install}" == "true" ]] || [[ "${insight}" != "true" ]]; then
+                mkdir tmp
+                echo "No chart changes detected." > tmp/install.log
+                export STEP_STATUS_MESSAGE="Charts install is not needed."
+                exit 0
+              fi
+          onExecute:
+            - echo "Run charts install!"
+            - installers/src/products/helm-charts/test/e2e-eks-common.sh
+            - |
+              if cat tmp/install.log | grep "Error installing charts" > /dev/null; then
+                  echo "Charts install failed!"
+                  exit 1
+              fi
+          onSuccess:
+            - |
+              if [[ "${do_not_install}" == "true" ]] || [[ "${insight}" != "true" ]]; then        
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 10] CT Install Helm Charts insight : Skipped installation"
+              else
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 10] CT Install Helm Charts insight : Successfully Completed"
+              fi
+          onFailure:
+            - 'update_commit_status jfrog_installer_bitbucket_charts --message "[Step 10] CT Install Helm Charts insight : Failed"'
+
+      - name: c_install_helm_charts_xray
+        type: Bash
+        configuration:
+          timeoutSeconds: 9000
+          environmentVariables:
+            STEP_STATUS_MESSAGE: "'Charts install successful.'"
+            CHART_TESTING_ARGS: "--charts=installers/src/products/helm-charts/stable/xray"
+          inputResources:
+            - name: jfrog_installer_bitbucket_charts
+          integrations:
+            - name: charts_testing_cluster
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: charts_testing_cluster_v16
+            - name: charts_testing_cluster_eks_v16
+          inputSteps:
+            - name: package_helm_charts
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_charts_resourcePath}
+            - git checkout ${res_jfrog_installer_bitbucket_charts_branchName}
+            - |
+              if [[ "${do_not_install}" == "true" ]] || [[ "${xray}" != "true" ]]; then
+                mkdir tmp
+                echo "No chart changes detected." > tmp/install.log
+                export STEP_STATUS_MESSAGE="Charts install is not needed."
+                exit 0
+              fi
+          onExecute:
+            - echo "Run charts install!"
+            - installers/src/products/helm-charts/test/e2e-eks-common.sh
+            - |
+              if cat tmp/install.log | grep "Error installing charts" > /dev/null; then
+                  echo "Charts install failed!"
+                  exit 1
+              fi
+          onSuccess:
+            - |
+              if [[ "${do_not_install}" == "true" ]] || [[ "${xray}" != "true" ]]; then        
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 11] CT Install Helm Charts xray : Skipped installation"
+              else
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 11] CT Install Helm Charts xray : Successfully Completed"
+              fi
+          onFailure:
+            - 'update_commit_status jfrog_installer_bitbucket_charts --message "[Step 11] CT Install Helm Charts xray : Failed"'
+
+      - name: c_install_helm_charts_pipelines
+        type: Bash
+        configuration:
+          timeoutSeconds: 9000
+          environmentVariables:
+            STEP_STATUS_MESSAGE: "'Charts install successful.'"
+            CHART_TESTING_ARGS: "--charts=installers/src/products/helm-charts/stable/pipelines"
+          inputResources:
+            - name: jfrog_installer_bitbucket_charts
+          integrations:
+            - name: charts_testing_cluster
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: charts_testing_cluster_v16
+            - name: charts_testing_cluster_eks_v16
+          inputSteps:
+            - name: package_helm_charts
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_charts_resourcePath}
+            - git checkout ${res_jfrog_installer_bitbucket_charts_branchName}
+            - |
+              if [[ "${do_not_install}" == "true" ]] || [[ "${pipelines}" != "true" ]]; then
+                mkdir tmp
+                echo "No chart changes detected." > tmp/install.log
+                export STEP_STATUS_MESSAGE="Charts install is not needed."
+                exit 0
+              fi
+          onExecute:
+            - echo "Run charts install!"
+            - installers/src/products/helm-charts/test/e2e-eks-common.sh
+            - |
+              if cat tmp/install.log | grep "Error installing charts" > /dev/null; then
+                  echo "Charts install failed!"
+                  exit 1
+              fi
+          onSuccess:
+            - |
+              if [[ "${do_not_install}" == "true" ]] || [[ "${pipelines}" != "true" ]]; then        
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 12] CT Install Helm Charts pipelines : Skipped installation"
+              else
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 12] CT Install Helm Charts pipelines : Successfully Completed"
+              fi
+          onFailure:
+            - 'update_commit_status jfrog_installer_bitbucket_charts --message "[Step 12] CT Install Helm Charts pipelines : Failed"'
+
+      - name: c_install_helm_charts_jfrog_platform
+        type: Bash
+        configuration:
+          timeoutSeconds: 9000
+          environmentVariables:
+            STEP_STATUS_MESSAGE: "'Charts install successful.'"
+            CHART_TESTING_ARGS: "--charts=installers/src/products/helm-charts/stable/jfrog-platform"
+          inputResources:
+            - name: jfrog_installer_bitbucket_charts
+          integrations:
+            - name: charts_testing_cluster
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+            - name: charts_testing_cluster_v16
+            - name: charts_testing_cluster_eks_v16
+          inputSteps:
+            - name: package_helm_charts
+        execution:
+          onStart:
+            - pushd ${res_jfrog_installer_bitbucket_charts_resourcePath}
+            - git checkout ${res_jfrog_installer_bitbucket_charts_branchName}
+            - |
+              if [[ "${do_not_install}" == "true" ]] || [[ "${jfrog_platform}" != "true" ]]; then
+                mkdir tmp
+                echo "No chart changes detected." > tmp/install.log
+                export STEP_STATUS_MESSAGE="Charts install is not needed."
+                exit 0
+              fi
+          onExecute:
+            - echo "Run charts install!"
+            - installers/src/products/helm-charts/test/e2e-eks-common.sh
+            - |
+              if cat tmp/install.log | grep "Error installing charts" > /dev/null; then
+                  echo "Charts install failed!"
+                  exit 1
+              fi
+          onSuccess:
+            - |
+              if [[ "${do_not_install}" == "true" ]] || [[ "${jfrog_platform}" != "true" ]]; then        
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 13] CT Install Helm Charts jfrog-platform : Skipped installation"
+              else
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 13] CT Install Helm Charts jfrog-platform : Successfully Completed"
+              fi
+          onFailure:
+            - 'update_commit_status jfrog_installer_bitbucket_charts --message "[Step 13] CT Install Helm Charts jfrog-platform : Failed"'
+
+      - name: c_install_saas_deployer_check
+        type: Bash
+        configuration:
+          inputResources:
+            - name: jfrog_installer_bitbucket_charts
+          outputResources:
+            - name: pre_install_property_bag
+          integrations:
+            - name: charts_testing_cluster
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+          inputSteps:
+            - name: package_helm_charts
+        execution:
+          onStart:
+            - |
+              if [[ "${do_not_install}" == "true" ]]; then
+                mkdir tmp
+                echo "No chart changes detected."
+                export STEP_STATUS_MESSAGE="Charts install is not needed."
+                exit 0
+              fi
+          onExecute:
+            - echo "Saas Deployer install is needed!"
+          onSuccess:
+            - write_output pre_install_property_bag previous_step_id="${step_id}"
+            - write_output pre_install_property_bag extraParams="${extraParams}"
+            - |
+              if [[ "${do_not_install}" == "true" ]]; then    
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 14] Saas Deployer check : Skipped installation"
+              else
+                update_commit_status jfrog_installer_bitbucket_charts --message "[Step 14] Saas Deployer check: Successfully Completed"
+              fi
+          onFailure:
+            - 'update_commit_status jfrog_installer_bitbucket_charts --message "[Step 14] Saas Deployer check : Failed"'
+
+## TODO : Add success/failure steps once https://www.jfrog.com/jira/browse/PIPE-4774 is implemented
+      - name: c_install_saas_deployer_default
+        type: Jenkins
+        configuration:
+          timeoutSeconds: 1800
+          inputResources:
+            - name: pre_install_property_bag
+          integrations:
+            - name: jenkins_entplus_ci
+          inputSteps:
+            - name: c_install_saas_deployer_check
+          jenkinsJobName: tools/job/platform/job/environment_setup
+          buildParameters:
+            SERVER_NAME: ci${res_pre_install_property_bag_previous_step_id}
+            ACCOUNT_TYPE: "enterprise_plus"
+            GROUP: "DEVOPS"
+            EXPIRY: "2h"
+            XRAY: "true"
+            PIPELINES: "true"
+            JFMC: "true"
+            DISTRIBUTION: "true"
+            EXTRA_PARAMS: ${DEFAULT_EXTRA_PARAMS}
+
+## TODO : Add success/failure steps once https://www.jfrog.com/jira/browse/PIPE-4774 is implemented
+      - name: c_install_saas_deployer_upgrade
+        type: Jenkins
+        configuration:
+          timeoutSeconds: 1800
+          inputResources:
+            - name: pre_install_property_bag
+          integrations:
+            - name: jenkins_entplus_ci
+          inputSteps:
+            - name: c_install_saas_deployer_default
+          jenkinsJobName: tools/job/platform/job/environment_operate
+          buildParameters:
+            SERVER_NAME: ci${res_pre_install_property_bag_previous_step_id}
+            ACTION: "update"
+            EXPIRY: "1h"
+            EXTRA_PARAMS: "${res_pre_install_property_bag_extraParams}"

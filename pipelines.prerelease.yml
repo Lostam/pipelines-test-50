@@ -1,0 +1,175 @@
+pipelines:
+  - name: artifactory_monorepo_prerelease
+    configuration:
+      environmentVariables:
+        readOnly:
+          SUGGESTED_MINOR: ""
+    steps:
+      - name: prepare_prerelease_pipeline
+        type: Bash
+        configuration:
+          priority: 1
+          inputResources:
+            - name: artifactory_monorepo_bitbucket
+              trigger: false
+          integrations:
+            - name: jfdev_agent
+            - name: artifactory_bitbucket_push
+            - name: docker_jfrog_io_reader
+            - name: entplus_deployer
+        execution:
+          onStart:
+            - source "${res_artifactory_monorepo_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script build/ci/scripts/lib/prereleaseUtils.sh
+          onExecute:
+            - prerelease_verifyPipelineInputParametersAndExportSettings "${SUGGESTED_MINOR}" "artifactory-oss/pom.xml"
+            - prerelease_exportPreReleaseBranchName "${CURRENT_MAJOR_VERSION}" "${MINOR_VERSION}" "jfrt"
+          onFailure:
+            - stepCommons_on_failure
+          onSuccess:
+            - stepCommons_on_success
+
+
+      - name: create_branch_and_modify_prerelease_versions
+        type: Bash
+        configuration:
+          priority: 1
+          inputResources:
+            - name: artifactory_monorepo_bitbucket
+              trigger: false
+          integrations:
+            - name: jfdev_agent
+            - name: artifactory_bitbucket_push
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+          inputSteps:
+            - name: prepare_prerelease_pipeline
+        execution:
+          onStart:
+            - pushd ${res_artifactory_monorepo_bitbucket_resourcePath}/build/ci/scripts
+            - git config core.sshCommand "ssh -i ~/.ssh/artifactory_bitbucket_push -F /dev/null"
+            - git checkout -b ${PRERELEASE_BRANCH_NAME}
+            - source "${res_artifactory_monorepo_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script build/ci/scripts/lib/prereleaseUtils.sh
+          onExecute:
+            - prerelease_modifyPreReleaseMavenVersion "${PRERELEASE_MAVEN_VERSION}"
+            - prerelease_modifyPreReleaseNpmVersion "${PRERELEASE_NPM_VERSION}"
+          onSuccess:
+            - stepCommons_on_success
+            - git commit -a -m "DEVF-1549 - Update pre-release version '${CURRENT_MAJOR_VERSION}.${MINOR_VERSION}.x'"
+            - git push origin ${PRERELEASE_BRANCH_NAME}
+          onFailure:
+            - stepCommons_on_failure
+
+      - name: check_repositories_exist
+        type: Bash
+        configuration:
+          timeoutSeconds: 300
+          priority: 1
+          inputResources:
+            - name: artifactory_monorepo_bitbucket
+              trigger: false
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+          inputSteps:
+            - name: create_branch_and_modify_prerelease_versions
+        execution:
+          onStart:
+            - pushd ${res_artifactory_monorepo_bitbucket_resourcePath}/build/ci/scripts
+            - git checkout ${PRERELEASE_BRANCH_NAME}
+          onExecute:
+            - ./checkRepositories.sh ${PRERELEASE_BRANCH_NAME}
+          onSuccess:
+            - stepCommons_on_success
+          onFailure:
+            - stepCommons_on_failure
+
+      - name: wait_for_branch_sync
+        type: Bash
+        configuration:
+          timeoutSeconds: 300
+          priority: 1
+          inputResources:
+            - name: artifactory_monorepo_bitbucket
+              trigger: false
+          integrations:
+            - name: jfdev_agent
+            - name: entplus_pipelines
+            - name: entplus_deployer
+            - name: docker_jfrog_io_reader
+          inputSteps:
+            - name: create_branch_and_modify_prerelease_versions
+        execution:
+          onStart:
+            - pushd ${res_artifactory_monorepo_bitbucket_resourcePath}/build/ci/scripts
+          onExecute:
+            - ./checkBranchSynced.sh "jfrog/artifactory" ${PRERELEASE_BRANCH_NAME}
+          onFailure:
+            - stepCommons_on_failure
+          onSuccess:
+            - stepCommons_on_success
+
+      - name: trigger_master_next_version_milestone
+        type: Bash
+        configuration:
+          priority: 1
+          inputResources:
+            - name: artifactory_monorepo_bitbucket
+              trigger: false
+          integrations:
+            - name: jfdev_agent
+            - name: artifactory_bitbucket_push
+            - name: entplus_deployer
+            - name: entplus_pipelines
+            - name: docker_jfrog_io_reader
+          inputSteps:
+            - name: create_branch_and_modify_prerelease_versions
+        execution:
+          onStart:
+            - source "${res_artifactory_monorepo_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script build/ci/scripts/lib/prereleaseUtils.sh
+          onExecute:
+            - prerelease_triggerMilestoneReleasePipelineForNextMinorInMaster "${CURRENT_MAJOR_VERSION}" "${MINOR_VERSION}"
+          onSuccess:
+            - stepCommons_on_success
+            - |
+              echo "Link to new milestone release pipeline in master"
+              artifactory_url=$(echo ${int_entplus_deployer_url%/artifactory})
+              echo "Release Pipeline: ${artifactory_url}/ui/pipelines/myPipelines/default/artifactory_monorepo_release?branch=master"
+          onFailure:
+            - stepCommons_on_failure
+
+      - name: trigger_all_prerelease_branch_build
+        type: Bash
+        configuration:
+          priority: 1
+          inputResources:
+            - name: artifactory_monorepo_bitbucket
+              trigger: false
+          integrations:
+            - name: jfdev_agent
+            - name: artifactory_bitbucket_push
+            - name: entplus_deployer
+            - name: entplus_pipelines
+            - name: docker_jfrog_io_reader
+          inputSteps:
+            - name: check_repositories_exist
+            - name: wait_for_branch_sync
+        execution:
+          onStart:
+            - source "${res_artifactory_monorepo_bitbucket_resourcePath}/build/ci/scripts/lib/pipelineStepCommons.sh"
+            - stepCommons_load_script build/ci/scripts/lib/pipelineUtils.sh
+          onExecute:
+            - echo "triggering all monorepo build on ${PRERELEASE_BRANCH_NAME}"
+            - pipeline_triggerStep "${int_entplus_pipelines_url}" "${int_entplus_pipelines_admin_token}" "artifactory_monorepo_build" "trigger_all" "${PRERELEASE_BRANCH_NAME}"
+          onSuccess:
+            - stepCommons_on_success
+            - |
+              echo "Link to build pipeline"
+              artifactory_url=$(echo ${int_entplus_deployer_url%/artifactory})
+              encoded_branch=$(sed 's~/~%2F~g' <<< ${PRERELEASE_BRANCH_NAME})
+              echo "Build Pipeline: ${artifactory_url}/ui/pipelines/myPipelines/default/artifactory_monorepo_build?branch=${encoded_branch}"
+          onFailure:
+            - stepCommons_on_failure
