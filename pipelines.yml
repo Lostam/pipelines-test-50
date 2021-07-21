@@ -1,9 +1,3 @@
-resources:
-  - name: npm_example_buildinfo_jfp
-    type: BuildInfo
-    configuration:
-      sourceArtifactory: demo_art
-
 pipelines:
   - name: npm_sample
     steps:
